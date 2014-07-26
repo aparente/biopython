@@ -27,12 +27,16 @@
 
 """
 
-# ReportLab imports
+from __future__ import print_function
+
 from reportlab.lib import colors
 
+from Bio._py3k import range
+
 # GenomeDiagram imports
-from _FeatureSet import FeatureSet
-from _GraphSet import GraphSet
+from ._FeatureSet import FeatureSet
+from ._GraphSet import GraphSet
+
 
 class Track(object):
     """ Track
@@ -41,16 +45,7 @@ class Track(object):
 
         Methods:
 
-        o __init__(self, name=None, height=1, hide=0, greytrack=0,
-                 greytrack_labels=5, greytrack_fontsize=8,
-                 greytrack_font='Helvetica', greytrack_font_rotation=0,
-                 greytrack_fontcolor = colors.Color(0.6, 0.6, 0.6),
-                 scale=1, scale_color=colors.black, scale_font='Helvetica',
-                 scale_fontsize=6,
-                 scale_fontangle=45, scale_largeticks=0.5, scale_ticks=1,
-                 scale_smallticks=0.3, scale_largetick_interval=1e6,
-                 scale_smalltick_interval=1e4, scale_largetick_labels=1,
-                 scale_smalltick_labels=0) Called on instantiation
+        o __init__(self, name=None, ...) Called on instantiation
 
         o add_set(self, set)    Add a FeatureSet or GraphSet to the diagram
 
@@ -80,6 +75,9 @@ class Track(object):
 
         o hide      Boolean, 0 if the track is not to be drawn
 
+        o start, end    Integers (or None) specifying start/end to draw just
+                        a partial track.
+
         o greytrack     Boolean, 1 if a grey background to the track is to be
                         drawn
 
@@ -93,7 +91,7 @@ class Track(object):
                                 labels on the grey track
 
         o greytrack_font_rotation   Int describing the angle through which to
-                                    rotate the grey track labels
+                                    rotate the grey track labels (Linear only)
 
         o greytrack_font_color     colors.Color describing the color to draw
                                     the grey track labels
@@ -130,7 +128,7 @@ class Track(object):
 
         o scale_largetick_labels    Boolean describing whether position labels
                                     should be written over large ticks
-                                    
+
         o scale_smalltick_labels    Boolean describing whether position labels
                                     should be written over small ticks
 
@@ -147,8 +145,9 @@ class Track(object):
                  scale_smallticks=0.3, scale_largetick_interval=1e6,
                  scale_smalltick_interval=1e4, scale_largetick_labels=1,
                  scale_smalltick_labels=0, axis_labels=1,
+                 start=None, end=None,
                  greytrack_font_colour = None, scale_colour=None):
-        """ __init__(self, name=None, height=1)
+        """ __init__(self, name=None, ...)
 
             o height    Int describing the relative height to other tracks in the
                         diagram
@@ -170,7 +169,7 @@ class Track(object):
                                     labels on the grey track
 
             o greytrack_font_rotation   Int describing the angle through which to
-                                        rotate the grey track labels
+                                        rotate the grey track labels (Linear only)
 
             o greytrack_font_color     colors.Color describing the color to draw
                                        the grey track labels (overridden by
@@ -207,12 +206,12 @@ class Track(object):
 
             o scale_largetick_labels    Boolean describing whether position labels
                                         should be written over large ticks
-                                        
+
             o scale_smalltick_labels    Boolean describing whether position labels
                                         should be written over small ticks
 
             o name          String to help identify the track
-            
+
             o height        Relative height to draw the track
 
             o axis_labels       Boolean describing whether the value labels should
@@ -234,6 +233,8 @@ class Track(object):
         else:
             self.name = "Track"
         self.hide = hide
+        self.start = start
+        self.end = end
 
         # Attributes for the grey track background and labels
         self.greytrack = greytrack
@@ -258,7 +259,6 @@ class Track(object):
         self.scale_largetick_labels = scale_largetick_labels
         self.scale_smalltick_labels = scale_smalltick_labels
         self.axis_labels = axis_labels
-        
 
     def add_set(self, set):
         """ add_set(self, set)
@@ -272,7 +272,6 @@ class Track(object):
         self._sets[self._next_id] = set # Add set, keyed by unique id
         self._next_id += 1              # Increment unique set ids
 
-
     def new_set(self, type='feature', **args):
         """ new_set(self, type='feature') -> FeatureSet or GraphSet
 
@@ -281,16 +280,15 @@ class Track(object):
         """
         type_dict = {'feature': FeatureSet,
                      'graph': GraphSet
-                     }        
+                     }
         set = type_dict[type]()
         for key in args:
-            setattr(set, key, args[key])        
+            setattr(set, key, args[key])
         set.id = self._next_id          # Assign unique id to set
         set.parent = self               # Make set's parent this track
         self._sets[self._next_id] = set # Add set, keyed by unique id
         self._next_id += 1              # Increment unique set ids
         return set
-
 
     def del_set(self, set_id):
         """ del_set(self, set_id)
@@ -301,22 +299,19 @@ class Track(object):
         """
         del self._sets[set_id]
 
-
     def get_sets(self):
         """ get_sets(self) -> FeatureSet or GraphSet
 
             Return the sets contained in this track
         """
-        return self._sets.values()
-
+        return list(self._sets.values())
 
     def get_ids(self):
         """ get_ids(self) -> [int, int, ...]
 
             Return the ids of all sets contained in this track
         """
-        return self._sets.keys()
-
+        return list(self._sets.keys())
 
     def range(self):
         """ range(self) -> (int, int)
@@ -324,12 +319,23 @@ class Track(object):
             Returns the lowest and highest base (or mark) numbers as a tuple
         """
         lows, highs = [], []            # Holds set of low and high values from sets
+        if self.start is not None:
+            lows.append(self.start)
+        if self.end is not None:
+            highs.append(self.end)
         for set in self._sets.values():
             low, high = set.range()     # Get each set range
             lows.append(low)
             highs.append(high)
-        return (min(lows), max(highs))  # Return lowest and highest values
-    
+        if lows:
+            low = min(lows)
+        else:
+            low = None
+        if highs:
+            high = max(highs)
+        else:
+            high = None
+        return low, high  # Return lowest and highest values
 
     def to_string(self, verbose=0):
         """ to_string(self, verbose=0) -> ""
@@ -346,8 +352,7 @@ class Track(object):
             outstr.append("%d sets" % len(self._sets))
             for key in self._sets:
                 outstr.append("set: %s" % self._sets[key])
-            return "\n".join(outstr)      
-
+            return "\n".join(outstr)
 
     def __getitem__(self, key):
         """ __getitem__(self, key) -> int
@@ -358,7 +363,6 @@ class Track(object):
         """
         return self._sets[key]
 
-
     def __str__(self):
         """ __str__(self) -> ""
 
@@ -367,7 +371,6 @@ class Track(object):
         outstr = ["\n<%s: %s>" % (self.__class__, self.name)]
         outstr.append("%d sets" % len(self._sets))
         return "\n".join(outstr)
-    
 
 
 ################################################################################
@@ -378,11 +381,10 @@ if __name__ == '__main__':
 
     # test code
     from Bio import SeqIO
-    from Bio.SeqFeature import SeqFeature
-    from _FeatureSet import FeatureSet
-    from _GraphSet import GraphSet
+    from ._FeatureSet import FeatureSet
+    from ._GraphSet import GraphSet
     from random import normalvariate
-    
+
     genbank_entry = SeqIO.read('/data/genomes/Bacteria/Nanoarchaeum_equitans/NC_005213.gbk', 'gb')
 
     gdfs1 = FeatureSet(0, 'Nanoarchaeum equitans CDS - CDS')
@@ -398,15 +400,15 @@ if __name__ == '__main__':
     gdt.add_set(gdfs2)
 
     graphdata = []
-    for pos in xrange(1, len(genbank_entry.seq), 1000):
+    for pos in range(1, len(genbank_entry.seq), 1000):
         graphdata.append((pos, normalvariate(0.5, 0.1)))
     gdgs = GraphSet(2, 'test data')
     gdgs.add_graph(graphdata, 'Test Data')
     gdt.add_set(gdgs)
-    
-    print gdt.get_ids()
+
+    print(gdt.get_ids())
     sets = gdt.get_sets()
     for set in sets:
-        print set
+        print(set)
 
-    print gdt.get_element_limits()
+    print(gdt.get_element_limits())

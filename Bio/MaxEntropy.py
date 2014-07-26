@@ -3,17 +3,19 @@
 # license.  Please see the LICENSE file that should have been included
 # as part of this package.
 
+"""Maximum Entropy code.
+
+Uses Improved Iterative Scaling.
 """
-Maximum Entropy code.
+#TODO Define terminology
 
-Uses Improved Iterative Scaling:
-XXX ref
+from __future__ import print_function
+from functools import reduce
 
-# XXX need to define terminology
-
-"""
+from Bio._py3k import map
 
 import numpy
+
 
 class MaxEntropy(object):
     """Holds information for a Maximum Entropy classifier.
@@ -28,6 +30,7 @@ class MaxEntropy(object):
         self.classes = []
         self.alphas = []
         self.feature_fns = []
+
 
 def calculate(me, observation):
     """calculate(me, observation) -> list of log probs
@@ -47,6 +50,7 @@ def calculate(me, observation):
         scores.append(lprob)
     return scores
 
+
 def classify(me, observation):
     """classify(me, observation) -> class
 
@@ -59,6 +63,7 @@ def classify(me, observation):
         if scores[i] > max_score:
             max_score, klass = scores[i], me.classes[i]
     return klass
+
 
 def _eval_feature_fn(fn, xs, classes):
     """_eval_feature_fn(fn, xs, classes) -> dict of values
@@ -78,6 +83,7 @@ def _eval_feature_fn(fn, xs, classes):
                 values[(i, j)] = f
     return values
 
+
 def _calc_empirical_expects(xs, ys, classes, features):
     """_calc_empirical_expects(xs, ys, classes, features) -> list of expectations
 
@@ -92,7 +98,7 @@ def _calc_empirical_expects(xs, ys, classes, features):
     for index, key in enumerate(classes):
         class2index[key] = index
     ys_i = [class2index[y] for y in ys]
-    
+
     expect = []
     N = len(xs)
     for feature in features:
@@ -101,6 +107,7 @@ def _calc_empirical_expects(xs, ys, classes, features):
             s += feature.get((i, ys_i[i]), 0)
         expect.append(float(s) / N)
     return expect
+
 
 def _calc_model_expects(xs, classes, features, alphas):
     """_calc_model_expects(xs, classes, features, alphas) -> list of expectations.
@@ -117,10 +124,11 @@ def _calc_model_expects(xs, classes, features, alphas):
     expects = []
     for feature in features:
         sum = 0.0
-        for (i, j), f in feature.iteritems():
+        for (i, j), f in feature.items():
             sum += p_yx[i][j] * f
         expects.append(sum/len(xs))
     return expects
+
 
 def _calc_p_class_given_x(xs, classes, features, alphas):
     """_calc_p_class_given_x(xs, classes, features, alphas) -> matrix
@@ -134,7 +142,7 @@ def _calc_p_class_given_x(xs, classes, features, alphas):
     # Calculate log P(y, x).
     assert len(features) == len(alphas)
     for feature, alpha in zip(features, alphas):
-        for (x, y), f in feature.iteritems():
+        for (x, y), f in feature.items():
             prob_yx[x][y] += alpha * f
     # Take an exponent to get P(y, x)
     prob_yx = numpy.exp(prob_yx)
@@ -158,14 +166,16 @@ def _calc_p_class_given_x(xs, classes, features, alphas):
     #    prob_yx.append(probs)
     return prob_yx
 
+
 def _calc_f_sharp(N, nclasses, features):
     """_calc_f_sharp(N, nclasses, features) -> matrix of f sharp values."""
     # f#(x, y) = SUM_i feature(x, y)
     f_sharp = numpy.zeros((N, nclasses))
     for feature in features:
-        for (i, j), f in feature.iteritems():
+        for (i, j), f in feature.items():
             f_sharp[i][j] += f
     return f_sharp
+
 
 def _iis_solve_delta(N, feature, f_sharp, empirical, prob_yx,
                      max_newton_iterations, newton_converge):
@@ -175,7 +185,7 @@ def _iis_solve_delta(N, feature, f_sharp, empirical, prob_yx,
     iters = 0
     while iters < max_newton_iterations: # iterate for Newton's method
         f_newton = df_newton = 0.0       # evaluate the function and derivative
-        for (i, j), f in feature.iteritems():
+        for (i, j), f in feature.items():
             prod = prob_yx[i][j] * f * numpy.exp(delta * f_sharp[i][j])
             f_newton += prod
             df_newton += prod * f_sharp[i][j]
@@ -189,6 +199,7 @@ def _iis_solve_delta(N, feature, f_sharp, empirical, prob_yx,
     else:
         raise RuntimeError("Newton's method did not converge")
     return delta
+
 
 def _train_iis(xs, classes, features, f_sharp, alphas, e_empirical,
                max_newton_iterations, newton_converge):
@@ -256,12 +267,12 @@ def train(training_set, results, feature_fns, update_fn=None,
         diff = map(lambda x, y: numpy.fabs(x-y), alphas, nalphas)
         diff = reduce(lambda x, y: x+y, diff, 0)
         alphas = nalphas
-        
+
         me = MaxEntropy()
         me.alphas, me.classes, me.feature_fns = alphas, classes, feature_fns
         if update_fn is not None:
             update_fn(me)
-    
+
         if diff < iis_converge:   # converged
             break
     else:
@@ -319,9 +330,9 @@ if __name__ == "__main__":
         else:
             return 1
 
-    user_functions=[udf1, udf2, udf3] # must be an iterable type 
+    user_functions=[udf1, udf2, udf3] # must be an iterable type
 
     xe=train(xcar, ycar, user_functions)
-    for xv,yv in zip(xcar, ycar):
+    for xv, yv in zip(xcar, ycar):
         xc=classify(xe, xv)
-        print 'Pred:', xv, 'gives', xc, 'y is', yv
+        print('Pred: %s gives %s y is %s' % (xv, xc, yv))

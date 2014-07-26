@@ -1,7 +1,15 @@
+# This code is part of the Biopython distribution and governed by its
+# license.  Please see the LICENSE file that should have been included
+# as part of this package.
+#
+
 """Perform Simple mutations on an organism's genome.
 """
 # standard modules
 import random
+
+from Bio._py3k import range
+
 
 class SinglePositionMutation(object):
     """Perform a conversion mutation, but only at a single point in the genome.
@@ -35,14 +43,15 @@ class SinglePositionMutation(object):
         if mutation_chance <= self._mutation_rate:
             # pick a gene position to mutate at
             mutation_pos = \
-                         self._pos_rand.choice(range(len(mutated_org.genome)))
-            
+                         self._pos_rand.choice(list(range(len(mutated_org.genome))))
+
             # get a new letter to replace the position at
             new_letter = self._switch_rand.choice(gene_choices)
 
             mutated_org.genome[mutation_pos] = new_letter
 
         return mutated_org
+
 
 class ConversionMutation(object):
     """Potentially mutate any item to another in the alphabet.
@@ -70,9 +79,9 @@ class ConversionMutation(object):
         """Mutate the organisms genome.
         """
         mutated_org = organism.copy()
-        
+
         gene_choices = mutated_org.genome.alphabet.letters
-        
+
         # potentially mutate any gene in the genome
         for gene_index in range(len(mutated_org.genome)):
             mutation_chance = self._mutation_rand.random()
@@ -83,6 +92,3 @@ class ConversionMutation(object):
                 mutated_org.genome[gene_index] = new_letter
 
         return mutated_org
-                
-        
-    

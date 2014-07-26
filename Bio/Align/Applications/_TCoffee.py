@@ -5,15 +5,18 @@
 """Command line wrapper for the multiple alignment program TCOFFEE.
 """
 
-__docformat__ = "epytext en" #Don't just use plain text in epydoc API pages!
+from __future__ import print_function
 
-from Bio.Application import _Option, _Switch, _Argument, AbstractCommandline
+__docformat__ = "epytext en"  # Don't just use plain text in epydoc API pages!
+
+from Bio.Application import _Option, _Switch, AbstractCommandline
+
 
 class TCoffeeCommandline(AbstractCommandline):
     """Commandline object for the TCoffee alignment program.
 
     http://www.tcoffee.org/Projects_home_page/t_coffee_home_page.html
-    
+
     The T-Coffee command line tool has a lot of switches and options.
     This wrapper implements a VERY limited number of options - if you
     would like to help improve it please get in touch.
@@ -27,12 +30,12 @@ class TCoffeeCommandline(AbstractCommandline):
     >>> tcoffee_cline = TCoffeeCommandline(infile="unaligned.fasta",
     ...                                    output="clustalw",
     ...                                    outfile="aligned.aln")
-    >>> print tcoffee_cline
+    >>> print(tcoffee_cline)
     t_coffee -output clustalw -infile unaligned.fasta -outfile aligned.aln
 
     You would typically run the command line with tcoffee_cline() or via
     the Python subprocess module, as described in the Biopython tutorial.
-    
+
     Citation:
 
     T-Coffee: A novel method for multiple sequence alignments.
@@ -40,7 +43,7 @@ class TCoffeeCommandline(AbstractCommandline):
 
     Last checked against: Version_6.92
     """
-    SEQ_TYPES = ["dna","protein","dna_protein"]
+    SEQ_TYPES = ["dna", "protein", "dna_protein"]
 
     def __init__(self, cmd="t_coffee", **kwargs):
         self.parameters = [
@@ -52,7 +55,7 @@ class TCoffeeCommandline(AbstractCommandline):
 
                    Note that of these Biopython's AlignIO module will only
                    read clustalw, pir, and fasta.
-                   """, #TODO - Can we read the PHYLIP output?
+                   """,  # TODO - Can we read the PHYLIP output?
                    equate=False),
            _Option(["-infile", "infile"],
                    "Specify the input file.",
@@ -96,14 +99,15 @@ class TCoffeeCommandline(AbstractCommandline):
                    "Specifies a special mode: genome, quickaln, dali, 3dcoffee",
                    equate=False),
            ]
-        AbstractCommandline.__init__(self, cmd, **kwargs)           
+        AbstractCommandline.__init__(self, cmd, **kwargs)
+
 
 def _test():
     """Run the module's doctests (PRIVATE)."""
-    print "Runing modules doctests..."
+    print("Running modules doctests...")
     import doctest
     doctest.testmod()
-    print "Done"
+    print("Done")
 
 if __name__ == "__main__":
     _test()

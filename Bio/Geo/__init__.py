@@ -9,7 +9,7 @@
 http://www.ncbi.nlm.nih.gov/geo/
 """
 
-import Record
+from . import Record
 
 
 def _read_key_value(line):
@@ -28,10 +28,12 @@ def parse(handle):
     record = None
     for line in handle:
         line = line.strip('\n').strip('\r')
-        if not line: continue # Ignore empty lines
+        if not line:
+            continue # Ignore empty lines
         c = line[0]
         if c=='^':
-            if record: yield record
+            if record:
+                yield record
             record = Record.Record()
             record.entity_type, record.entity_id = _read_key_value(line)
         elif c=='!':
@@ -42,7 +44,7 @@ def parse(handle):
                 continue
             key, value = _read_key_value(line)
             if key in record.entity_attributes:
-                if type(record.entity_attributes[key])==list:
+                if isinstance(record.entity_attributes[key], list):
                     record.entity_attributes[key].append(value)
                 else:
                     existing = record.entity_attributes[key]

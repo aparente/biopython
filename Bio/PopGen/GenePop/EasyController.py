@@ -3,8 +3,6 @@
 # license.  Please see the LICENSE file that should have been included
 # as part of this package.
 
-
-
 """
 This module allows to control GenePop through an easier interface.
 
@@ -12,28 +10,26 @@ This interface is less efficient than the standard GenePopControler
 
 """
 
-from Controller import GenePopController
+from .Controller import GenePopController
 from Bio.PopGen import GenePop
 
 
 class EasyController(object):
     def __init__(self, fname, genepop_dir = None):
         """Initializes the controller.
-        
+
         genepop_dir is the directory where GenePop is.
 
         The binary should be called Genepop (capital G)
-        
         """
         self._fname = fname
         self._controller = GenePopController(genepop_dir)
-        self.__fst_pair_locus = {} #More caches like this needed!
-        self.__allele_frequency = {} #More caches like this needed!
+        self.__fst_pair_locus = {}    # More caches like this needed!
+        self.__allele_frequency = {}  # More caches like this needed!
 
     def get_basic_info(self):
-        f=open(self._fname)
-        rec = GenePop.read(f)
-        f.close()
+        with open(self._fname) as f:
+            rec = GenePop.read(f)
         return rec.pop_list, rec.loci_list
 
     def test_hw_pop(self, pop_pos, test_type = "probability"):
@@ -44,11 +40,11 @@ class EasyController(object):
         else:
             loci_res, hw_res, fisher_full = self._controller.test_pop_hz_prob(self._fname, ".P")
         for i in range(pop_pos-1):
-            hw_res.next()
-        return hw_res.next()
+            next(hw_res)
+        return next(hw_res)
 
     def test_hw_global(self, test_type = "deficiency", enum_test = True,
-        dememorization = 10000, batches = 20, iterations = 5000):
+                       dememorization = 10000, batches = 20, iterations = 5000):
         if test_type=="deficiency":
             pop_res, loc_res, all = self._controller.test_global_hz_deficiency(self._fname,
                 enum_test, dememorization, batches, iterations)
@@ -57,8 +53,8 @@ class EasyController(object):
                 enum_test, dememorization, batches, iterations)
         return list(pop_res), list(loc_res), all
 
-    def test_ld_all_pair(self, locus1, locus2,
-        dememorization = 10000, batches = 20, iterations = 5000):
+    def test_ld_all_pair(self, locus1, locus2, dememorization = 10000,
+                         batches = 20, iterations = 5000):
         all_ld = self._controller.test_ld(self._fname, dememorization, batches, iterations)[1]
         for ld_case in all_ld:
             (l1, l2), result = ld_case
@@ -93,7 +89,7 @@ class EasyController(object):
     def get_fis(self, pop_pos, locus_name):
         """Returns the Fis for a certain population and locus
 
-           Below CW means Cockerham and Weir and RH means Robertson and Hill. 
+           Below CW means Cockerham and Weir and RH means Robertson and Hill.
 
            Returns a pair:
            dictionary [allele] = (repetition count, frequency, Fis CW )
@@ -114,7 +110,7 @@ class EasyController(object):
         geno_freqs = self._controller.calc_allele_genotype_freqs(self._fname)
         pop_iter, loc_iter = geno_freqs
         pop_iter = list(pop_iter)
-        return pop_iter[pop_pos][1][locus_name][2].keys()
+        return list(pop_iter[pop_pos][1][locus_name][2].keys())
 
     def get_alleles_all_pops(self, locus_name):
         """Returns the alleles for a certain population and locus.
@@ -131,7 +127,7 @@ class EasyController(object):
             geno_freqs = self._controller.calc_allele_genotype_freqs(self._fname)
             pop_iter, loc_iter = geno_freqs
             for locus_info in loc_iter:
-                if locus_info[0] == None:
+                if locus_info[0] is None:
                     self.__allele_frequency[locus_info[0]] = None, None
                 else:
                     self.__allele_frequency[locus_info[0]] = locus_info[1:]
@@ -142,7 +138,6 @@ class EasyController(object):
         for i in range(len(alleles)):
             allele_freq[alleles[i]] = freqs[i]
         return total, allele_freq
-
 
     def get_multilocus_f_stats(self):
         """ Returns the multilocus F stats
@@ -157,7 +152,7 @@ class EasyController(object):
 
             Returns Fis(CW), Fst, Fit, Qintra, Qinter
         """
-        loci_iter =  self._controller.calc_fst_all(self._fname)[1]
+        loci_iter = self._controller.calc_fst_all(self._fname)[1]
         for name, fis, fst, fit, qintra, qinter in loci_iter:
             if name == locus_name:
                 return fis, fst, fit, qintra, qinter

@@ -1,17 +1,19 @@
 # Copyright (C) 2002, Thomas Hamelryck (thamelry@binf.ku.dk)
 # This code is part of the Biopython distribution and governed by its
 # license.  Please see the LICENSE file that should have been included
-# as part of this package.           
+# as part of this package.
 
 """Atom class, used in Structure objects."""
 
 import numpy
 import warnings
+import copy
 
 from Bio.PDB.Entity import DisorderedEntityWrapper
 from Bio.PDB.PDBExceptions import PDBConstructionWarning
 from Bio.PDB.Vector import Vector
 from Bio.Data import IUPACData
+
 
 class Atom(object):
     def __init__(self, name, coord, bfactor, occupancy, altloc, fullname, serial_number,
@@ -19,11 +21,11 @@ class Atom(object):
         """
         Atom object.
 
-        The Atom object stores atom name (both with and without spaces), 
+        The Atom object stores atom name (both with and without spaces),
         coordinates, B factor, occupancy, alternative location specifier
-        and (optionally) anisotropic B factor and standard deviations of 
+        and (optionally) anisotropic B factor and standard deviations of
         B factor and positions.
-  
+
         @param name: atom name (eg. "CA"). Note that spaces are normally stripped.
         @type name: string
 
@@ -31,7 +33,7 @@ class Atom(object):
         @type coord: Numeric array (Float0, size 3)
 
         @param bfactor: isotropic B factor
-        @type bfactor: number 
+        @type bfactor: number
 
         @param occupancy: occupancy (0.0-1.0)
         @type occupancy: number
@@ -40,15 +42,14 @@ class Atom(object):
         @type altloc: string
 
         @param fullname: full atom name, including spaces, e.g. " CA ". Normally
-        these spaces are stripped from the atom name. 
+        these spaces are stripped from the atom name.
         @type fullname: string
 
         @param element: atom element, e.g. "C" for Carbon, "HG" for mercury,
         @type fullname: uppercase string (or None if unknown)
-     
         """
         self.level="A"
-        # Reference to the residue 
+        # Reference to the residue
         self.parent=None
         # the atomic data
         self.name=name      # eg. CA, spaces are removed from atom name
@@ -64,21 +65,21 @@ class Atom(object):
         self.siguij_array=None
         self.sigatm_array=None
         self.serial_number=serial_number
-        # Dictionary that keeps addictional properties
+        # Dictionary that keeps additional properties
         self.xtra={}
         assert not element or element == element.upper(), element
         self.element = self._assign_element(element)
         self.mass = self._assign_atom_mass()
-        
+
     def _assign_element(self, element):
         """Tries to guess element from atom name if not recognised."""
         if not element or element.capitalize() not in IUPACData.atom_weights:
-            # Inorganic elements have their name shifted left by one position 
+            # Inorganic elements have their name shifted left by one position
             #  (is a convention in PDB, but not part of the standard).
-            # isdigit() check on last two characters to avoid mis-assignment of 
+            # isdigit() check on last two characters to avoid mis-assignment of
             # hydrogens atoms (GLN HE21 for example)
 
-            if self.fullname[0] != " " and not self.fullname[2:].isdigit():
+            if self.fullname[0].isalpha() and not self.fullname[2:].isdigit():
                 putative_element = self.name.strip()
             else:
                 # Hs may have digit in [0]
@@ -86,7 +87,7 @@ class Atom(object):
                     putative_element = self.name[1]
                 else:
                     putative_element = self.name[0]
-            
+
             if putative_element.capitalize() in IUPACData.atom_weights:
                 msg = "Used element %r for Atom (name=%s) with given element %r" \
                       % (putative_element, self.name, element)
@@ -96,9 +97,9 @@ class Atom(object):
                       % (putative_element, self.name, element)
                 element = ""
             warnings.warn(msg, PDBConstructionWarning)
-                
+
         return element
-        
+
     def _assign_atom_mass(self):
         # Needed for Bio/Struct/Geometry.py C.O.M. function
         if self.element:
@@ -106,8 +107,7 @@ class Atom(object):
         else:
             return float('NaN')
 
-
-    # Special methods   
+    # Special methods
 
     def __repr__(self):
         "Print Atom object as <Atom atom_name>."
@@ -116,7 +116,7 @@ class Atom(object):
     def __sub__(self, other):
         """
         Calculate distance between two atoms.
-        
+
         Example:
             >>> distance=atom1-atom2
 
@@ -124,7 +124,7 @@ class Atom(object):
         @type other: L{Atom}
         """
         diff=self.coord-other.coord
-        return numpy.sqrt(numpy.dot(diff,diff))
+        return numpy.sqrt(numpy.dot(diff, diff))
 
     # set methods
 
@@ -148,7 +148,7 @@ class Atom(object):
         Set standard deviation of atomic parameters.
 
         The standard deviation of atomic parameters consists
-        of 3 positional, 1 B factor and 1 occupancy standard 
+        of 3 positional, 1 B factor and 1 occupancy standard
         deviation.
 
         @param sigatm_array: standard deviations of atomic parameters.
@@ -174,8 +174,7 @@ class Atom(object):
         """
         self.anisou_array=anisou_array
 
-
-    # Public methods    
+    # Public methods
 
     def flag_disorder(self):
         """Set the disordered flag to 1.
@@ -186,7 +185,7 @@ class Atom(object):
 
     def is_disordered(self):
         "Return the disordered flag (1 if disordered, 0 otherwise)."
-        return self.disordered_flag 
+        return self.disordered_flag
 
     def set_parent(self, parent):
         """Set the parent residue.
@@ -195,7 +194,7 @@ class Atom(object):
         o parent - Residue object
         """
         self.parent=parent
-    
+
     def detach_parent(self):
         "Remove reference to parent."
         self.parent=None
@@ -230,11 +229,11 @@ class Atom(object):
     def get_full_id(self):
         """Return the full id of the atom.
 
-        The full id of an atom is the tuple 
+        The full id of an atom is the tuple
         (structure id, model id, chain id, residue id, atom name, altloc).
         """
         return self.parent.get_full_id()+((self.name, self.altloc),)
-    
+
     def get_coord(self):
         "Return atomic coordinates."
         return self.coord
@@ -263,8 +262,8 @@ class Atom(object):
         Apply rotation and translation to the atomic coordinates.
 
         Example:
-                >>> rotation=rotmat(pi, Vector(1,0,0))
-                >>> translation=array((0,0,1), 'f')
+                >>> rotation=rotmat(pi, Vector(1, 0, 0))
+                >>> translation=array((0, 0, 1), 'f')
                 >>> atom.transform(rotation, translation)
 
         @param rot: A right multiplying rotation matrix
@@ -274,7 +273,7 @@ class Atom(object):
         @type tran: size 3 Numeric array
         """
         self.coord=numpy.dot(self.coord, rot)+tran
-        
+
     def get_vector(self):
         """
         Return coordinates as Vector.
@@ -282,8 +281,20 @@ class Atom(object):
         @return: coordinates as 3D vector
         @rtype: Vector
         """
-        x,y,z=self.coord
-        return Vector(x,y,z)
+        x, y, z=self.coord
+        return Vector(x, y, z)
+
+    def copy(self):
+        """
+        Create a copy of the Atom.
+        Parent information is lost.
+        """
+        # Do a shallow copy then explicitly copy what needs to be deeper.
+        shallow = copy.copy(self)
+        shallow.detach_parent()
+        shallow.set_coord(copy.copy(self.get_coord()))
+        shallow.xtra = self.xtra.copy()
+        return shallow
 
 
 class DisorderedAtom(DisorderedEntityWrapper):
@@ -291,10 +302,10 @@ class DisorderedAtom(DisorderedEntityWrapper):
     This class contains all Atom objects that represent the same disordered
     atom. One of these atoms is "selected" and all method calls not caught
     by DisorderedAtom are forwarded to the selected Atom object. In that way, a
-    DisorderedAtom behaves exactly like a normal Atom. By default, the selected 
-    Atom object represents the Atom object with the highest occupancy, but a 
-    different Atom object can be selected by using the disordered_select(altloc) 
-    method. 
+    DisorderedAtom behaves exactly like a normal Atom. By default, the selected
+    Atom object represents the Atom object with the highest occupancy, but a
+    different Atom object can be selected by using the disordered_select(altloc)
+    method.
     """
     def __init__(self, id):
         """
@@ -307,11 +318,11 @@ class DisorderedAtom(DisorderedEntityWrapper):
     # Special methods
 
     def __repr__(self):
-        return "<Disordered Atom %s>" % self.get_id() 
+        return "<Disordered Atom %s>" % self.get_id()
 
     def disordered_add(self, atom):
         "Add a disordered atom."
-        # Add atom to dict, use altloc as key   
+        # Add atom to dict, use altloc as key
         atom.flag_disorder()
         # set the residue parent of the added atom
         residue=self.get_parent()
@@ -322,3 +333,4 @@ class DisorderedAtom(DisorderedEntityWrapper):
         if occupancy>self.last_occupancy:
             self.last_occupancy=occupancy
             self.disordered_select(altloc)
+

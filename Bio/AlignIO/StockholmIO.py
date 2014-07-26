@@ -1,9 +1,9 @@
-# Copyright 2006-2010 by Peter Cock.  All rights reserved.
+# Copyright 2006-2013 by Peter Cock.  All rights reserved.
+#
 # This code is part of the Biopython distribution and governed by its
 # license.  Please see the LICENSE file that should have been included
 # as part of this package.
-"""
-Bio.AlignIO support for the "stockholm" format (used in the PFAM database).
+"""Bio.AlignIO support for "stockholm" format (used in the PFAM database).
 
 You are expected to use this module via the Bio.AlignIO functions (or the
 Bio.SeqIO functions if you want to work directly with the gapped sequences).
@@ -29,12 +29,12 @@ using the Bio.AlignIO.read() function:
 
     >>> from Bio import AlignIO
     >>> align = AlignIO.read("Stockholm/simple.sth", "stockholm")
-    >>> print align
+    >>> print(align)
     SingleLetterAlphabet() alignment with 2 rows and 104 columns
     UUAAUCGAGCUCAACACUCUUCGUAUAUCCUC-UCAAUAUGG-G...UGU AP001509.1
     AAAAUUGAAUAUCGUUUUACUUGUUUAU-GUCGUGAAU-UGG-C...GAU AE007476.1
     >>> for record in align:
-    ...     print record.id, len(record)
+    ...     print("%s %i" % (record.id, len(record)))
     AP001509.1 104
     AE007476.1 104
 
@@ -47,7 +47,7 @@ optional argument to the Bio.AlignIO.read() function:
     >>> from Bio.Alphabet import generic_rna
     >>> align = AlignIO.read("Stockholm/simple.sth", "stockholm",
     ...                      alphabet=generic_rna)
-    >>> print align
+    >>> print(align)
     RNAAlphabet() alignment with 2 rows and 104 columns
     UUAAUCGAGCUCAACACUCUUCGUAUAUCCUC-UCAAUAUGG-G...UGU AP001509.1
     AAAAUUGAAUAUCGUUUUACUUGUUUAU-GUCGUGAAU-UGG-C...GAU AE007476.1
@@ -57,9 +57,9 @@ some GR lines for the secondary structure of the sequences.  These are
 strings, with one character for each letter in the associated sequence:
 
     >>> for record in align:
-    ...     print record.id
-    ...     print record.seq
-    ...     print record.letter_annotations['secondary_structure']
+    ...     print(record.id)
+    ...     print(record.seq)
+    ...     print(record.letter_annotations['secondary_structure'])
     AP001509.1
     UUAAUCGAGCUCAACACUCUUCGUAUAUCCUC-UCAAUAUGG-GAUGAGGGUCUCUAC-AGGUA-CCGUAAA-UACCUAGCUACGAAAAGAAUGCAGUUAAUGU
     -----------------<<<<<<<<---..<<-<<-------->>->>..---------<<<<<--------->>>>>--->>>>>>>>---------------
@@ -71,7 +71,7 @@ Any general annotation for each row is recorded in the SeqRecord's annotations
 dictionary.  You can output this alignment in many different file formats
 using Bio.AlignIO.write(), or the MultipleSeqAlignment object's format method:
 
-    >>> print align.format("fasta")
+    >>> print(align.format("fasta"))
     >AP001509.1
     UUAAUCGAGCUCAACACUCUUCGUAUAUCCUC-UCAAUAUGG-GAUGAGGGUCUCUAC-A
     GGUA-CCGUAAA-UACCUAGCUACGAAAAGAAUGCAGUUAAUGU
@@ -83,7 +83,7 @@ using Bio.AlignIO.write(), or the MultipleSeqAlignment object's format method:
 Most output formats won't be able to hold the annotation possible in a
 Stockholm file:
 
-    >>> print align.format("stockholm")
+    >>> print(align.format("stockholm"))
     # STOCKHOLM 1.0
     #=GF SQ 2
     AP001509.1 UUAAUCGAGCUCAACACUCUUCGUAUAUCCUC-UCAAUAUGG-GAUGAGGGUCUCUAC-AGGUA-CCGUAAA-UACCUAGCUACGAAAAGAAUGCAGUUAAUGU
@@ -100,7 +100,7 @@ Stockholm file:
 Note that when writing Stockholm files, AlignIO does not break long sequences
 up and interleave them (as in the input file shown above).  The standard
 allows this simpler layout, and it is more likely to be understood by other
-tools. 
+tools.
 
 Finally, as an aside, it can sometimes be useful to use Bio.SeqIO.parse() to
 iterate over the alignment rows as SeqRecord objects - rather than working
@@ -110,9 +110,9 @@ with Alignnment objects. Again, if you want to you can specify this is RNA:
     >>> from Bio.Alphabet import generic_rna
     >>> for record in SeqIO.parse("Stockholm/simple.sth", "stockholm",
     ...                           alphabet=generic_rna):
-    ...     print record.id
-    ...     print record.seq
-    ...     print record.letter_annotations['secondary_structure']
+    ...     print(record.id)
+    ...     print(record.seq)
+    ...     print(record.letter_annotations['secondary_structure'])
     AP001509.1
     UUAAUCGAGCUCAACACUCUUCGUAUAUCCUC-UCAAUAUGG-GAUGAGGGUCUCUAC-AGGUA-CCGUAAA-UACCUAGCUACGAAAAGAAUGCAGUUAAUGU
     -----------------<<<<<<<<---..<<-<<-------->>->>..---------<<<<<--------->>>>>--->>>>>>>>---------------
@@ -124,49 +124,52 @@ Remember that if you slice a SeqRecord, the per-letter-annotions like the
 secondary structure string here, are also sliced:
 
     >>> sub_record = record[10:20]
-    >>> print sub_record.seq
+    >>> print(sub_record.seq)
     AUCGUUUUAC
-    >>> print sub_record.letter_annotations['secondary_structure']
+    >>> print(sub_record.letter_annotations['secondary_structure'])
     -------<<<
 """
-__docformat__ = "epytext en" #not just plaintext
+from __future__ import print_function
+
+__docformat__ = "epytext en"  # not just plaintext
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.Align import MultipleSeqAlignment
-from Interfaces import AlignmentIterator, SequentialAlignmentWriter
+from .Interfaces import AlignmentIterator, SequentialAlignmentWriter
+
 
 class StockholmWriter(SequentialAlignmentWriter):
     """Stockholm/PFAM alignment writer."""
 
     #These dictionaries should be kept in sync with those
     #defined in the StockholmIterator class.
-    pfam_gr_mapping = {"secondary_structure" : "SS",
-                       "surface_accessibility" : "SA",
-                       "transmembrane" : "TM",
-                       "posterior_probability" : "PP",
-                       "ligand_binding" : "LI",
-                       "active_site" : "AS",
-                       "intron" : "IN"}
+    pfam_gr_mapping = {"secondary_structure": "SS",
+                       "surface_accessibility": "SA",
+                       "transmembrane": "TM",
+                       "posterior_probability": "PP",
+                       "ligand_binding": "LI",
+                       "active_site": "AS",
+                       "intron": "IN"}
     #Following dictionary deliberately does not cover AC, DE or DR
-    pfam_gs_mapping = {"organism" : "OS",
-                       "organism_classification" : "OC",
-                       "look" : "LO"}
+    pfam_gs_mapping = {"organism": "OS",
+                       "organism_classification": "OC",
+                       "look": "LO"}
 
     def write_alignment(self, alignment):
         """Use this to write (another) single alignment to an open file.
-        
+
         Note that sequences and their annotation are recorded
         together (rather than having a block of annotation followed
         by a block of aligned sequences).
         """
         count = len(alignment)
-        
+
         self._length_of_sequences = alignment.get_alignment_length()
         self._ids_written = []
-        
+
         #NOTE - For now, the alignment object does not hold any per column
         #or per alignment annotation - only per sequence.
-        
+
         if count == 0:
             raise ValueError("Must have at least one sequence")
         if self._length_of_sequences == 0:
@@ -191,10 +194,10 @@ class StockholmWriter(SequentialAlignmentWriter):
                     seq_name = record.name
 
         #In the Stockholm file format, spaces are not allowed in the id
-        seq_name = seq_name.replace(" ","_")
+        seq_name = seq_name.replace(" ", "_")
 
         if "start" in record.annotations \
-        and  "end" in record.annotations:
+        and "end" in record.annotations:
             suffix = "/%s-%s" % (str(record.annotations["start"]),
                                  str(record.annotations["end"]))
             if seq_name[-len(suffix):] != suffix:
@@ -205,7 +208,7 @@ class StockholmWriter(SequentialAlignmentWriter):
         if seq_name in self._ids_written:
             raise ValueError("Duplicate record identifier: %s" % seq_name)
         self._ids_written.append(seq_name)
-        self.handle.write("%s %s\n" % (seq_name, record.seq.tostring()))
+        self.handle.write("%s %s\n" % (seq_name, str(record.seq)))
 
         #The recommended placement for GS lines (per sequence annotation)
         #is above the alignment (as a header block) or just below the
@@ -220,28 +223,28 @@ class StockholmWriter(SequentialAlignmentWriter):
 
         #AC = Accession
         if "accession" in record.annotations:
-            self.handle.write("#=GS %s AC %s\n" \
+            self.handle.write("#=GS %s AC %s\n"
                 % (seq_name, self.clean(record.annotations["accession"])))
         elif record.id:
-            self.handle.write("#=GS %s AC %s\n" \
+            self.handle.write("#=GS %s AC %s\n"
                 % (seq_name, self.clean(record.id)))
-        
+
         #DE = description
         if record.description:
-            self.handle.write("#=GS %s DE %s\n" \
+            self.handle.write("#=GS %s DE %s\n"
                 % (seq_name, self.clean(record.description)))
 
         #DE = database links
         for xref in record.dbxrefs:
-            self.handle.write("#=GS %s DR %s\n" \
+            self.handle.write("#=GS %s DR %s\n"
                 % (seq_name, self.clean(xref)))
 
         #GS = other per sequence annotation
-        for key, value in record.annotations.iteritems():
+        for key, value in record.annotations.items():
             if key in self.pfam_gs_mapping:
                 data = self.clean(str(value))
                 if data:
-                    self.handle.write("#=GS %s %s %s\n" \
+                    self.handle.write("#=GS %s %s %s\n"
                                       % (seq_name,
                                          self.clean(self.pfam_gs_mapping[key]),
                                          data))
@@ -251,11 +254,11 @@ class StockholmWriter(SequentialAlignmentWriter):
                 pass
 
         #GR = per row per column sequence annotation
-        for key, value in record.letter_annotations.iteritems():
-            if key in self.pfam_gr_mapping and len(str(value))==len(record.seq):
+        for key, value in record.letter_annotations.items():
+            if key in self.pfam_gr_mapping and len(str(value)) == len(record.seq):
                 data = self.clean(str(value))
                 if data:
-                    self.handle.write("#=GR %s %s %s\n" \
+                    self.handle.write("#=GR %s %s %s\n"
                                       % (seq_name,
                                          self.clean(self.pfam_gr_mapping[key]),
                                          data))
@@ -263,7 +266,8 @@ class StockholmWriter(SequentialAlignmentWriter):
                 #It doesn't follow the PFAM standards, but should we record
                 #this data anyway?
                 pass
-        
+
+
 class StockholmIterator(AlignmentIterator):
     """Loads a Stockholm file from PFAM into MultipleSeqAlignment objects.
 
@@ -273,7 +277,7 @@ class StockholmIterator(AlignmentIterator):
     This parser will detect if the Stockholm file follows the PFAM
     conventions for sequence specific meta-data (lines starting #=GS
     and #=GR) and populates the SeqRecord fields accordingly.
-    
+
     Any annotation which does not follow the PFAM conventions is currently
     ignored.
 
@@ -296,19 +300,19 @@ class StockholmIterator(AlignmentIterator):
 
     #These dictionaries should be kept in sync with those
     #defined in the PfamStockholmWriter class.
-    pfam_gr_mapping = {"SS" : "secondary_structure",
-                       "SA" : "surface_accessibility",
-                       "TM" : "transmembrane",
-                       "PP" : "posterior_probability",
-                       "LI" : "ligand_binding",
-                       "AS" : "active_site",
-                       "IN" : "intron"}
+    pfam_gr_mapping = {"SS": "secondary_structure",
+                       "SA": "surface_accessibility",
+                       "TM": "transmembrane",
+                       "PP": "posterior_probability",
+                       "LI": "ligand_binding",
+                       "AS": "active_site",
+                       "IN": "intron"}
     #Following dictionary deliberately does not cover AC, DE or DR
-    pfam_gs_mapping = {"OS" : "organism",
-                       "OC" : "organism_classification",
-                       "LO" : "look"}
+    pfam_gs_mapping = {"OS": "organism",
+                       "OC": "organism_classification",
+                       "LO": "look"}
 
-    def next(self):
+    def __next__(self):
         try:
             line = self._header
             del self._header
@@ -319,8 +323,6 @@ class StockholmIterator(AlignmentIterator):
             raise StopIteration
         if not line.strip() == '# STOCKHOLM 1.0':
             raise ValueError("Did not find STOCKHOLM header")
-            #import sys
-            #print >> sys.stderr, 'Warning file does not start with STOCKHOLM 1.0'
 
         # Note: If this file follows the PFAM conventions, there should be
         # a line containing the number of sequences, e.g. "#=GF SQ 67"
@@ -333,10 +335,11 @@ class StockholmIterator(AlignmentIterator):
         gr = {}
         gf = {}
         passed_end_alignment = False
-        while 1:
+        while True:
             line = self.handle.readline()
-            if not line: break #end of file
-            line = line.strip() #remove trailing \n
+            if not line:
+                break  # end of file
+            line = line.strip()  # remove trailing \n
             if line == '# STOCKHOLM 1.0':
                 self._header = line
                 break
@@ -351,22 +354,22 @@ class StockholmIterator(AlignmentIterator):
                 #Sequence
                 #Format: "<seqname> <sequence>"
                 assert not passed_end_alignment
-                parts = [x.strip() for x in line.split(" ",1)]
+                parts = [x.strip() for x in line.split(" ", 1)]
                 if len(parts) != 2:
                     #This might be someone attempting to store a zero length sequence?
-                    raise ValueError("Could not split line into identifier " \
+                    raise ValueError("Could not split line into identifier "
                                       + "and sequence:\n" + line)
                 id, seq = parts
                 if id not in ids:
                     ids.append(id)
                 seqs.setdefault(id, '')
-                seqs[id] += seq.replace(".","-")
+                seqs[id] += seq.replace(".", "-")
             elif len(line) >= 5:
                 #Comment line or meta-data
                 if line[:5] == "#=GF ":
                     #Generic per-File annotation, free text
                     #Format: #=GF <feature> <free text>
-                    feature, text = line[5:].strip().split(None,1)
+                    feature, text = line[5:].strip().split(None, 1)
                     #Each feature key could be used more than once,
                     #so store the entries as a list of strings.
                     if feature not in gf:
@@ -380,7 +383,7 @@ class StockholmIterator(AlignmentIterator):
                 elif line[:5] == '#=GS ':
                     #Generic per-Sequence annotation, free text
                     #Format: "#=GS <seqname> <feature> <free text>"
-                    id, feature, text = line[5:].strip().split(None,2)
+                    id, feature, text = line[5:].strip().split(None, 2)
                     #if id not in ids:
                     #    ids.append(id)
                     if id not in gs:
@@ -392,19 +395,18 @@ class StockholmIterator(AlignmentIterator):
                 elif line[:5] == "#=GR ":
                     #Generic per-Sequence AND per-Column markup
                     #Format: "#=GR <seqname> <feature> <exactly 1 char per column>"
-                    id, feature, text = line[5:].strip().split(None,2)
+                    id, feature, text = line[5:].strip().split(None, 2)
                     #if id not in ids:
                     #    ids.append(id)
                     if id not in gr:
                         gr[id] = {}
                     if feature not in gr[id]:
                         gr[id][feature] = ""
-                    gr[id][feature] += text.strip() # append to any previous entry
+                    gr[id][feature] += text.strip()  # append to any previous entry
                     #TODO - Should we check the length matches the alignment length?
                     #       For iterlaced sequences the GR data can be split over
                     #       multiple lines
-            #Next line...            
-
+            #Next line...
 
         assert len(seqs) <= len(ids)
         #assert len(gs)   <= len(ids)
@@ -419,22 +421,22 @@ class StockholmIterator(AlignmentIterator):
 
             if self.records_per_alignment is not None \
             and self.records_per_alignment != len(ids):
-                raise ValueError("Found %i records in this alignment, told to expect %i" \
+                raise ValueError("Found %i records in this alignment, told to expect %i"
                                  % (len(ids), self.records_per_alignment))
 
-            alignment_length = len(seqs.values()[0])
-            records = [] #Alignment obj will put them all in a list anyway
+            alignment_length = len(list(seqs.values())[0])
+            records = []  # Alignment obj will put them all in a list anyway
             for id in ids:
                 seq = seqs[id]
                 if alignment_length != len(seq):
                     raise ValueError("Sequences have different lengths, or repeated identifier")
                 name, start, end = self._identifier_split(id)
                 record = SeqRecord(Seq(seq, self.alphabet),
-                                   id = id, name = name, description = id,
-                                   annotations = {"accession":name})
+                                   id=id, name=name, description=id,
+                                   annotations={"accession": name})
                 #Accession will be overridden by _populate_meta_data if an explicit
                 #accession is provided:
-                record.annotations["accession"]=name
+                record.annotations["accession"] = name
 
                 if start is not None:
                     record.annotations["start"] = start
@@ -453,16 +455,19 @@ class StockholmIterator(AlignmentIterator):
         else:
             raise StopIteration
 
-
     def _identifier_split(self, identifier):
-        """Returns (name,start,end) string tuple from an identier."""
-        if identifier.find("/")!=-1:
-            name, start_end = identifier.rsplit("/",1)
-            if start_end.count("-")==1:
-                start, end = map(int, start_end.split("-"))
-                return (name, start, end)
-        return (identifier, None, None)
-    
+        """Returns (name, start, end) string tuple from an identier."""
+        if '/' in identifier:
+            name, start_end = identifier.rsplit("/", 1)
+            if start_end.count("-") == 1:
+                try:
+                    start, end = start_end.split("-")
+                    return name, int(start), int(end)
+                except ValueError:
+                    # Non-integers after final '/' - fall through
+                    pass
+        return identifier, None, None
+
     def _get_meta_data(self, identifier, meta_dict):
         """Takes an itentifier and returns dict of all meta-data matching it.
 
@@ -479,11 +484,11 @@ class StockholmIterator(AlignmentIterator):
             Q9PN73_CAMJE/149-220               NKA...
             ...
             #=GS Q9PN73_CAMJE OS Campylobacter jejuni
-            #=GS Q9PN73_CAMJE OC Bacteria 
+            #=GS Q9PN73_CAMJE OC Bacteria
 
         This function will return an empty dictionary if no data is found."""
         name, start, end = self._identifier_split(identifier)
-        if name==identifier:
+        if name == identifier:
             identifier_keys = [identifier]
         else:
             identifier_keys = [identifier, name]
@@ -504,12 +509,12 @@ class StockholmIterator(AlignmentIterator):
         seq_data = self._get_meta_data(identifier, self.seq_annotation)
         for feature in seq_data:
             #Note this dictionary contains lists!
-            if feature=="AC" : #ACcession number
-                assert len(seq_data[feature])==1
-                record.annotations["accession"]=seq_data[feature][0]
-            elif feature=="DE" : #DEscription
+            if feature == "AC":  # ACcession number
+                assert len(seq_data[feature]) == 1
+                record.annotations["accession"] = seq_data[feature][0]
+            elif feature == "DE":  # DEscription
                 record.description = "\n".join(seq_data[feature])
-            elif feature=="DR" : #Database Reference
+            elif feature == "DR":  # Database Reference
                 #Should we try and parse the strings?
                 record.dbxrefs = seq_data[feature]
             elif feature in self.pfam_gs_mapping:
@@ -527,24 +532,9 @@ class StockholmIterator(AlignmentIterator):
             else:
                 #Ignore it?
                 record.letter_annotations["GR:" + feature] = seq_col_data[feature]
-    
-def _test():
-    """Run the Bio.SeqIO module's doctests.
 
-    This will try and locate the unit tests directory, and run the doctests
-    from there in order that the relative paths used in the examples work.
-    """
-    import doctest
-    import os
-    if os.path.isdir(os.path.join("..","..","Tests")):
-        print "Runing doctests..."
-        cur_dir = os.path.abspath(os.curdir)
-        os.chdir(os.path.join("..","..","Tests"))
-        assert os.path.isfile("Stockholm/simple.sth")
-        doctest.testmod()
-        os.chdir(cur_dir)
-        del cur_dir
-        print "Done"
-        
+
 if __name__ == "__main__":
-    _test()
+    from Bio._utils import run_doctest
+    run_doctest()
+

@@ -1,17 +1,24 @@
+# This code is part of the Biopython distribution and governed by its
+# license.  Please see the LICENSE file that should have been included
+# as part of this package.
+#
+
 """Provide classes for dealing with Training Neural Networks.
 """
 # standard modules
 import random
 
+
 class TrainingExample(object):
     """Hold inputs and outputs of a training example.
 
-    XXX Do I really need this? 
+    XXX Do I really need this?
     """
-    def __init__(self, inputs, outputs, name = ""):
+    def __init__(self, inputs, outputs, name=""):
         self.name = name
         self.inputs = inputs
         self.outputs = outputs
+
 
 class ExampleManager(object):
     """Manage a grouping of Training Examples.
@@ -32,7 +39,7 @@ class ExampleManager(object):
     provide a completely independent method of testing how well a network
     performs.
     """
-    def __init__(self, training_percent = .4, validation_percent = .4):
+    def __init__(self, training_percent=.4, validation_percent=.4):
         """Initialize the manager with the training examples.
 
         Arguments:
@@ -54,8 +61,8 @@ class ExampleManager(object):
         o test_examples - Examples for training purposes.
         """
         assert training_percent + validation_percent <= 1.0, \
-               "Training and validation percentages more than 100 percent"
-        
+            "Training and validation percentages more than 100 percent"
+
         self.train_examples = []
         self.validation_examples = []
         self.test_examples = []
@@ -71,7 +78,7 @@ class ExampleManager(object):
         o training_examples - A list of TrainingExamples to manage.
         """
         placement_rand = random.Random()
-        
+
         # assign exact example randomly to the example types
         for example in training_examples:
             chance_num = placement_rand.random()
@@ -83,7 +90,3 @@ class ExampleManager(object):
                 self.validation_examples.append(example)
             else:
                 self.test_examples.append(example)
-        
-                
-        
-        

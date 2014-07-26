@@ -9,15 +9,16 @@ Asynchronous local execution.
 Supports multicore architectures.
 '''
 
-from Bio.PopGen.Async import Async, FileRetriever
+from Bio.PopGen.Async import Async
 
-import thread
+import threading
+
 
 class Local(Async):
     '''Execution on Local machine.
     '''
 
-    def __init__(self, num_cores = 1):
+    def __init__(self, num_cores=1):
         '''Constructor.
 
            parameters:
@@ -40,7 +41,7 @@ class Local(Async):
         self.waiting.append((id, hook, parameters, input_files))
         if self.cores_used < self.num_cores:
             self.cores_used += 1
-            thread.start_new_thread(self.start_work, ())
+            threading.Thread(target=self.start_work).run()
         self.access_ds.release()
 
     def start_work(self):
@@ -63,4 +64,3 @@ class Local(Async):
             self.done[id] = ret_code, output_files
         self.cores_used -= 1
         self.access_ds.release()
-  

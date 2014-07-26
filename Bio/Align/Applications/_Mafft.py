@@ -5,13 +5,13 @@
 """Command line wrapper for the multiple alignment programme MAFFT.
 """
 
-__docformat__ = "epytext en" #Don't just use plain text in epydoc API pages!
+from __future__ import print_function
 
-#TODO - Remove file exist checks? Other wrappers don't do this, and
-#it prevent things like preparing commands to run on a cluster.
+__docformat__ = "epytext en"  # Don't just use plain text in epydoc API pages!
 
 import os
 from Bio.Application import _Option, _Switch, _Argument, AbstractCommandline
+
 
 class MafftCommandline(AbstractCommandline):
     """Command line wrapper for the multiple alignment program MAFFT.
@@ -24,7 +24,7 @@ class MafftCommandline(AbstractCommandline):
     >>> mafft_exe = "/opt/local/mafft"
     >>> in_file = "../Doc/examples/opuntia.fasta"
     >>> mafft_cline = MafftCommandline(mafft_exe, input=in_file)
-    >>> print mafft_cline
+    >>> print(mafft_cline)
     /opt/local/mafft ../Doc/examples/opuntia.fasta
 
     If the mafft binary is on the path (typically the case on a Unix style
@@ -33,28 +33,27 @@ class MafftCommandline(AbstractCommandline):
     >>> from Bio.Align.Applications import MafftCommandline
     >>> in_file = "../Doc/examples/opuntia.fasta"
     >>> mafft_cline = MafftCommandline(input=in_file)
-    >>> print mafft_cline
+    >>> print(mafft_cline)
     mafft ../Doc/examples/opuntia.fasta
 
     You would typically run the command line with mafft_cline() or via
     the Python subprocess module, as described in the Biopython tutorial.
     Note that MAFFT will write the alignment to stdout, which you may
-    want to save to a file and then parse, e.g.
+    want to save to a file and then parse, e.g.::
 
-    stdout, stderr = mafft_cline()
-    handle = open("aligned.fasta", "w")
-    handle.write(stdout)
-    handle.close()
-    from Bio import AlignIO
-    align = AlignIO.read("aligned.fasta", "fasta")
+        stdout, stderr = mafft_cline()
+        with open("aligned.fasta", "w") as handle:
+            handle.write(stdout)
+        from Bio import AlignIO
+        align = AlignIO.read("aligned.fasta", "fasta")
 
     Alternatively, to parse the output with AlignIO directly you can
-    use StringIO to turn the string into a handle:
+    use StringIO to turn the string into a handle::
 
-    stdout, stderr = mafft_cline()
-    from StringIO import StringIO
-    from Bio import AlignIO
-    align = AlignIO.read(StringIO(stdout), "fasta")
+        stdout, stderr = mafft_cline()
+        from StringIO import StringIO
+        from Bio import AlignIO
+        align = AlignIO.read(StringIO(stdout), "fasta")
 
     Citations:
 
@@ -80,7 +79,7 @@ class MafftCommandline(AbstractCommandline):
     Last checked against version: MAFFT v6.717b (2009/12/03)
     """
     def __init__(self, cmd="mafft", **kwargs):
-        BLOSUM_MATRICES = ["30","45","62","80"]
+        BLOSUM_MATRICES = ["30", "45", "62", "80"]
         self.parameters = \
             [
             #**** Algorithm ****
@@ -194,6 +193,18 @@ class MafftCommandline(AbstractCommandline):
             _Switch(["--groupsize", "groupsize"],
                     "Do not make alignment larger than number sequences. "
                     "Default: the number of input sequences"),
+            #Adjust direction according to the first sequence
+            #Mafft V6 beta function
+            _Switch(["--adjustdirection", "adjustdirection"],
+                    "Adjust direction according to the first sequence. "
+                    "Default off."),
+            #Adjust direction according to the first sequence
+            #for highly diverged data; very slow
+            #Mafft V6 beta function
+            _Switch(["--adjustdirectionaccurately", "adjustdirectionaccurately"],
+                    "Adjust direction according to the first sequence,"
+                    "for highly diverged data; very slow"
+                    "Default off."),
             #**** Parameter ****
             #Gap opening penalty at group-to-group alignment. Default: 1.53
             _Option(["--op", "op"],
@@ -261,7 +272,6 @@ class MafftCommandline(AbstractCommandline):
             _Option(["--tm", "tm"],
                     "Transmembrane PAM number (Jones et al. 1994) "
                     "matrix is used. number>0. Default: BLOSUM62",
-                    checker_function=os.path.exists,
                     filename=True,
                     equate=False),
             #Use a user-defined AA scoring matrix. The format of matrixfile is
@@ -270,7 +280,6 @@ class MafftCommandline(AbstractCommandline):
             _Option(["--aamatrix", "aamatrix"],
                     "Use a user-defined AA scoring matrix. "
                     "Default: BLOSUM62",
-                    checker_function=os.path.exists,
                     filename=True,
                     equate=False),
             #Incorporate the AA/nuc composition information into the scoring
@@ -279,9 +288,25 @@ class MafftCommandline(AbstractCommandline):
                     "Incorporate the AA/nuc composition information into "
                     "the scoring matrix (True) or not (False, default)"),
             #**** Output ****
+            #Name length for CLUSTAL and PHYLIP format output
+            _Option(["--namelength", "namelength"],
+                    """Name length in CLUSTAL and PHYLIP output.
+
+                    MAFFT v6.847 (2011) added --namelength for use with
+                    the --clustalout option for CLUSTAL output.
+
+                    MAFFT v7.024 (2013) added support for this with the
+                    --phylipout option for PHYLIP output (default 10).
+                    """,
+                    checker_function=lambda x: isinstance(x, int),
+                    equate=False),
             #Output format: clustal format. Default: off (fasta format)
             _Switch(["--clustalout", "clustalout"],
                     "Output format: clustal (True) or fasta (False, default)"),
+            #Output format: phylip format.
+            #Added in beta with v6.847, fixed in v6.850 (2011)
+            _Switch(["--phylipout", "phylipout"],
+                    "Output format: phylip (True), or fasta (False, default)"),
             #Output order: same as input. Default: on
             _Switch(["--inputorder", "inputorder"],
                     "Output order: same as input (True, default) or alignment "
@@ -315,12 +340,11 @@ class MafftCommandline(AbstractCommandline):
             _Option(["--seed", "seed"],
                     "Seed alignments given in alignment_n (fasta format) "
                     "are aligned with sequences in input.",
-                    checker_function=os.path.exists,
                     filename=True,
                     equate=False),
             #The old solution of also defining extra parameters with
             #["--seed", "seed1"] etc worked, but clashes with the recent
-            #code in the base class to look for duplicate paramters and raise
+            #code in the base class to look for duplicate parameters and raise
             #an error.  Perhaps that check should be ignored here, or maybe
             #we can handle this more elegantly...
             #TODO - Create an _OptionList parameter which allows a list to be
@@ -329,7 +353,6 @@ class MafftCommandline(AbstractCommandline):
             #The input (must be FASTA format)
             _Argument(["input"],
                       "Input file name",
-                      checker_function=os.path.exists,
                       filename=True,
                       is_required=True),
             ###################################################################
@@ -337,36 +360,12 @@ class MafftCommandline(AbstractCommandline):
             #mafft-profile align1 align2
             _Argument(["input1"],
                       "Second input file name for the mafft-profile command",
-                      checker_function=os.path.exists,
                       filename=True),
             ]
         AbstractCommandline.__init__(self, cmd, **kwargs)
 
-def _test():
-    """Run the module's doctests (PRIVATE).
-
-    This will try and locate the unit tests directory, and run the doctests
-    from there in order that the relative paths used in the examples work.
-    """
-    #TODO - Remove os.path checks on input filenames?
-    import doctest
-    import os
-    if os.path.isdir(os.path.join("..","Tests")):
-        print "Runing doctests..."
-        cur_dir = os.path.abspath(os.curdir)
-        os.chdir(os.path.join("..","Tests"))
-        doctest.testmod()
-        os.chdir(cur_dir)
-        del cur_dir
-        print "Done"
-    elif os.path.isdir(os.path.join("Tests")) :
-        print "Runing doctests..."
-        cur_dir = os.path.abspath(os.curdir)
-        os.chdir(os.path.join("Tests"))
-        doctest.testmod()
-        os.chdir(cur_dir)
-        del cur_dir
-        print "Done"
 
 if __name__ == "__main__":
-    _test()
+    from Bio._utils import run_doctest
+    run_doctest()
+

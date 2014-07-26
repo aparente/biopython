@@ -21,13 +21,13 @@ from Bio.PDB.Polypeptide import is_aa
 
 def run_psea(fname):
     """Run PSEA and return output filename.
-    
+
     Note that this assumes the P-SEA binary is called "psea" and that it is
     on the path.
-    
+
     Note that P-SEA will write an output file in the current directory using
     the input filename with extension ".sea".
-    
+
     Note that P-SEA will write output to the terminal while run.
     """
     os.system("psea "+fname)
@@ -35,23 +35,24 @@ def run_psea(fname):
     base=last.split(".")[0]
     return base+".sea"
 
+
 def psea(pname):
     """Parse PSEA output file."""
     fname=run_psea(pname)
     start=0
     ss=""
-    fp=open(fname, 'r')
-    for l in fp.readlines():
-        if l[0:6]==">p-sea":
-            start=1
-            continue
-        if not start:
-            continue
-        if l[0]=="\n":
-            break
-        ss=ss+l[0:-1]
-    fp.close()
+    with open(fname, 'r') as fp:
+        for l in fp.readlines():
+            if l[0:6]==">p-sea":
+                start=1
+                continue
+            if not start:
+                continue
+            if l[0]=="\n":
+                break
+            ss=ss+l[0:-1]
     return ss
+
 
 def psea2HEC(pseq):
     """Translate PSEA secondary structure string into HEC."""
@@ -65,6 +66,7 @@ def psea2HEC(pseq):
             n="C"
         seq.append(n)
     return seq
+
 
 def annotate(m, ss_seq):
     """Apply seconardary structure information to residues in model."""
@@ -82,6 +84,7 @@ def annotate(m, ss_seq):
         residues[i].xtra["SS_PSEA"]=ss_seq[i]
     #os.system("rm "+fname)
 
+
 class PSEA(object):
     def __init__(self, model, filename):
         ss_seq=psea(filename)
@@ -94,7 +97,7 @@ class PSEA(object):
         Return secondary structure string.
         """
         return self.ss_seq
-        
+
 
 if __name__=="__main__":
 

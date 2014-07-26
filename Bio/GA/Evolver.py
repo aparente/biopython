@@ -1,10 +1,18 @@
+# This code is part of the Biopython distribution and governed by its
+# license.  Please see the LICENSE file that should have been included
+# as part of this package.
+#
+
 """Evolution Strategies for a Population.
 
 Evolver classes manage a population of individuals, and are responsible
 for taking care of the transition from one generation to the next.
 """
 # standard modules
+from __future__ import print_function
+
 import sys
+
 
 class SteadyStateEvolver(object):
     """Evolve a population in place.
@@ -14,7 +22,8 @@ class SteadyStateEvolver(object):
     """
     def __init__(self):
         raise NotImplementedError("Need to code this.")
-        
+
+
 class GenerationEvolver(object):
     """Evolve a population from generation to generation.
 
@@ -65,7 +74,7 @@ class GenerationEvolver(object):
                 # sort the population so we can look at duplicates
                 self._population.sort()
                 for org in self._population:
-                    print org
+                    print(org)
                 sys.exit()
-            
+
         return self._population

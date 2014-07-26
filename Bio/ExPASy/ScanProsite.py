@@ -1,7 +1,15 @@
-import urllib
-from xml.sax import handler, make_parser, expatreader
+# Copyright 2009 by Michiel de Hoon. All rights reserved.
+# This code is part of the Biopython distribution and governed by its
+# license. Please see the LICENSE file that should have been included
+# as part of this package.
+
+#Importing these functions with leading underscore as not intended for reuse
+from Bio._py3k import urlopen as _urlopen
+from Bio._py3k import urlencode as _urlencode
+
+from xml.sax import handler
 from xml.sax.expatreader import ExpatParser
-from xml.sax._exceptions import SAXParseException
+
 
 class Record(list):
     """\
@@ -25,7 +33,7 @@ def scan(seq="", mirror='http://www.expasy.org', output='xml', **keywords):
                  TrEMBL) accession
     output:      Format of the search results
                  (default: xml)
-    
+
     Further search parameters can be passed as keywords; see the
     documentation for programmatic access to ScanProsite at
     http://www.expasy.org/tools/scanprosite/ScanPrositeREST.html
@@ -37,13 +45,14 @@ def scan(seq="", mirror='http://www.expasy.org', output='xml', **keywords):
     """
     parameters = {'seq': seq,
                   'output': output}
-    for key, value in keywords.iteritems():
+    for key, value in keywords.items():
         if value is not None:
             parameters[key] = value
-    command = urllib.urlencode(parameters)
+    command = _urlencode(parameters)
     url = "%s/cgi-bin/prosite/PSScan.cgi?%s" % (mirror, command)
-    handle = urllib.urlopen(url)
+    handle = _urlopen(url)
     return handle
+
 
 def read(handle):
     "Parse search results returned by ScanProsite into a Python object"
@@ -55,6 +64,7 @@ def read(handle):
     return record
 
 # The functions below are considered private
+
 
 class Parser(ExpatParser):
 
@@ -69,22 +79,24 @@ class Parser(ExpatParser):
         # The error message is (hopefully) contained in the data that was just
         # fed to the parser.
         if self.firsttime:
-            if data[:5]!="<?xml":
-                raise ValueError, data
-        self.firsttime = False 
+            if data[:5].decode('utf-8') != "<?xml":
+                raise ValueError(data)
+        self.firsttime = False
         return ExpatParser.feed(self, data, isFinal)
 
 
 class ContentHandler(handler.ContentHandler):
     integers = ("start", "stop")
-    strings = ("sequence_ac", 
+    strings = ("sequence_ac",
                "sequence_id",
                "sequence_db",
                "signature_ac",
                "level",
                "level_tag")
+
     def __init__(self):
         self.element = []
+
     def startElement(self, name, attrs):
         self.element.append(name)
         self.content = ""
@@ -95,6 +107,7 @@ class ContentHandler(handler.ContentHandler):
         elif self.element==["matchset", "match"]:
             match = {}
             self.record.append(match)
+
     def endElement(self, name):
         assert name==self.element.pop()
         name = str(name)
@@ -107,5 +120,6 @@ class ContentHandler(handler.ContentHandler):
             else:
                 # Unknown type, treat it as a string
                 match[name] = self.content
+
     def characters(self, content):
         self.content += content

@@ -3,8 +3,7 @@
 # This code is part of the Biopython distribution and governed by its
 # license.  Please see the LICENSE file that should have been included
 # as part of this package.
-"""
-Bio.AlignIO support for "fasta-m10" output from Bill Pearson's FASTA tools.
+"""Bio.AlignIO support for "fasta-m10" output from Bill Pearson's FASTA tools.
 
 You are expected to use this module via the Bio.AlignIO functions (or the
 Bio.SeqIO functions if you want to work directly with the gapped sequences).
@@ -20,10 +19,11 @@ Bio.SeqIO both use the Bio.SeqIO.FastaIO module to deal with these files,
 which can also be used to store a multiple sequence alignments.
 """
 
+from __future__ import print_function
+
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.Align import MultipleSeqAlignment
-from Interfaces import AlignmentIterator
 from Bio.Alphabet import single_letter_alphabet, generic_dna, generic_protein
 from Bio.Alphabet import Gapped
 
@@ -46,13 +46,13 @@ def _extract_alignment_region(alignment_seq_with_flanking, annotation):
     if int(annotation['al_start']) <= int(annotation['al_stop']):
         start = int(annotation['al_start']) \
               - display_start
-        end   = int(annotation['al_stop']) \
+        end = int(annotation['al_stop']) \
               - display_start + 1
     else:
         #FASTA has flipped this sequence...
         start = display_start \
               - int(annotation['al_start'])
-        end   = display_start \
+        end = display_start \
               - int(annotation['al_stop']) + 1
     end += align_stripped.count("-")
     assert 0 <= start and start < end and end <= len(align_stripped), \
@@ -60,7 +60,8 @@ def _extract_alignment_region(alignment_seq_with_flanking, annotation):
            % (alignment_seq_with_flanking, start, end, annotation)
     return align_stripped[start:end]
 
-def FastaM10Iterator(handle, alphabet = single_letter_alphabet):
+
+def FastaM10Iterator(handle, alphabet=single_letter_alphabet):
     """Alignment iterator for the FASTA tool's pairwise alignment output.
 
     This is for reading the pairwise alignments output by Bill Pearson's
@@ -77,9 +78,9 @@ def FastaM10Iterator(handle, alphabet = single_letter_alphabet):
         handle = ...
         for a in AlignIO.parse(handle, "fasta-m10"):
             assert len(a) == 2, "Should be pairwise!"
-            print "Alignment length %i" % a.get_alignment_length()
+            print("Alignment length %i" % a.get_alignment_length())
             for record in a:
-                print record.seq, record.name, record.id
+                print("%s %s %s" % (record.seq, record.name, record.id))
 
     Note that this is not a full blown parser for all the information
     in the FASTA output - for example, most of the header and all of the
@@ -93,7 +94,7 @@ def FastaM10Iterator(handle, alphabet = single_letter_alphabet):
     """
     if alphabet is None:
         alphabet = single_letter_alphabet
-    
+
     state_PREAMBLE = -1
     state_NONE = 0
     state_QUERY_HEADER = 1
@@ -103,31 +104,34 @@ def FastaM10Iterator(handle, alphabet = single_letter_alphabet):
     state_ALIGN_CONS = 5
 
     def build_hsp():
+        if not query_tags and not match_tags:
+            raise ValueError("No data for query %r, match %r"
+                             % (query_id, match_id))
         assert query_tags, query_tags
         assert match_tags, match_tags
         evalue = align_tags.get("fa_expect", None)
-        q = "?" #Just for printing len(q) in debug below
-        m = "?" #Just for printing len(m) in debug below
+        q = "?"  # Just for printing len(q) in debug below
+        m = "?"  # Just for printing len(m) in debug below
         tool = global_tags.get("tool", "").upper()
         try:
             q = _extract_alignment_region(query_seq, query_tags)
             if tool in ["TFASTX"] and len(match_seq) == len(q):
                 m = match_seq
                 #Quick hack until I can work out how -, * and / characters
-                #and the apparent mix of aa and bp coordindates works.
+                #and the apparent mix of aa and bp coordinates works.
             else:
                 m = _extract_alignment_region(match_seq, match_tags)
             assert len(q) == len(m)
-        except AssertionError, err:
-            print "Darn... amino acids vs nucleotide coordinates?"
-            print tool
-            print query_seq
-            print query_tags
-            print q, len(q)
-            print match_seq
-            print match_tags
-            print m, len(m)
-            print handle.name
+        except AssertionError as err:
+            print("Darn... amino acids vs nucleotide coordinates?")
+            print(tool)
+            print(query_seq)
+            print(query_tags)
+            print("%s %i" % (q, len(q)))
+            print(match_seq)
+            print(match_tags)
+            print("%s %i" % (m, len(m)))
+            print(handle.name)
             raise err
 
         assert alphabet is not None
@@ -136,20 +140,20 @@ def FastaM10Iterator(handle, alphabet = single_letter_alphabet):
         #TODO - Introduce an annotated alignment class?
         #For now, store the annotation a new private property:
         alignment._annotations = {}
-        
+
         #Want to record both the query header tags, and the alignment tags.
-        for key, value in header_tags.iteritems():
+        for key, value in header_tags.items():
             alignment._annotations[key] = value
-        for key, value in align_tags.iteritems():
+        for key, value in align_tags.items():
             alignment._annotations[key] = value
-        
+
         #Query
         #=====
         record = SeqRecord(Seq(q, alphabet),
-                           id = query_id,
-                           name = "query",
-                           description = query_descr,
-                           annotations = {"original_length" : int(query_tags["sq_len"])})
+                           id=query_id,
+                           name="query",
+                           description=query_descr,
+                           annotations={"original_length": int(query_tags["sq_len"])})
         #TODO - handle start/end coordinates properly. Short term hack for now:
         record._al_start = int(query_tags["al_start"])
         record._al_stop = int(query_tags["al_stop"])
@@ -164,16 +168,16 @@ def FastaM10Iterator(handle, alphabet = single_letter_alphabet):
             elif query_tags["sq_type"] == "p":
                 record.seq.alphabet = generic_protein
         if "-" in q:
-            if not hasattr(record.seq.alphabet,"gap_char"):
+            if not hasattr(record.seq.alphabet, "gap_char"):
                 record.seq.alphabet = Gapped(record.seq.alphabet, "-")
 
         #Match
         #=====
         record = SeqRecord(Seq(m, alphabet),
-                           id = match_id,
-                           name = "match",
-                           description = match_descr,
-                           annotations = {"original_length" : int(match_tags["sq_len"])})
+                           id=match_id,
+                           name="match",
+                           description=match_descr,
+                           annotations={"original_length": int(match_tags["sq_len"])})
         #TODO - handle start/end coordinates properly. Short term hack for now:
         record._al_start = int(match_tags["al_start"])
         record._al_stop = int(match_tags["al_stop"])
@@ -186,7 +190,7 @@ def FastaM10Iterator(handle, alphabet = single_letter_alphabet):
             elif match_tags["sq_type"] == "p":
                 record.seq.alphabet = generic_protein
         if "-" in m:
-            if not hasattr(record.seq.alphabet,"gap_char"):
+            if not hasattr(record.seq.alphabet, "gap_char"):
                 record.seq.alphabet = Gapped(record.seq.alphabet, "-")
 
         return alignment
@@ -212,7 +216,7 @@ def FastaM10Iterator(handle, alphabet = single_letter_alphabet):
                 yield build_hsp()
             state = state_NONE
             query_descr = line[line.find(">>>")+3:].strip()
-            query_id = query_descr.split(None,1)[0]
+            query_id = query_descr.split(None, 1)[0]
             match_id = None
             header_tags = {}
             align_tags = {}
@@ -253,7 +257,7 @@ def FastaM10Iterator(handle, alphabet = single_letter_alphabet):
         elif line.startswith(">>>"):
             #Should be start of a match!
             assert query_id is not None
-            assert line[3:].split(", ",1)[0] == query_id, line
+            assert line[3:].split(", ", 1)[0] == query_id, line
             assert match_id is None
             assert not header_tags
             assert not align_tags
@@ -274,7 +278,7 @@ def FastaM10Iterator(handle, alphabet = single_letter_alphabet):
             match_seq = ""
             cons_seq = ""
             match_descr = line[2:].strip()
-            match_id = match_descr.split(None,1)[0]
+            match_id = match_descr.split(None, 1)[0]
             state = state_ALIGN_HEADER
         elif line.startswith(">--"):
             #End of one HSP
@@ -294,13 +298,13 @@ def FastaM10Iterator(handle, alphabet = single_letter_alphabet):
                 #Should be start of query alignment seq...
                 assert query_id is not None, line
                 assert match_id is not None, line
-                assert query_id.startswith(line[1:].split(None,1)[0]), line
+                assert query_id.startswith(line[1:].split(None, 1)[0]), line
                 state = state_ALIGN_QUERY
             elif state == state_ALIGN_QUERY:
                 #Should be start of match alignment seq
                 assert query_id is not None, line
                 assert match_id is not None, line
-                assert match_id.startswith(line[1:].split(None,1)[0]), line
+                assert match_id.startswith(line[1:].split(None, 1)[0]), line
                 state = state_ALIGN_MATCH
             elif state == state_NONE:
                 #Can get > as the last line of a histogram
@@ -312,7 +316,17 @@ def FastaM10Iterator(handle, alphabet = single_letter_alphabet):
             state = state_ALIGN_CONS
             #Next line(s) should be consensus seq...
         elif line.startswith("; "):
-            key, value = [s.strip() for s in line[2:].split(": ",1)]
+            if ": " in line:
+                key, value = [s.strip() for s in line[2:].split(": ", 1)]
+            else:
+                import warnings
+                #Seen in lalign36, specifically version 36.3.4 Apr, 2011
+                #Fixed in version 36.3.5b Oct, 2011(preload8)
+                warnings.warn("Missing colon in line: %r" % line)
+                try:
+                    key, value = [s.strip() for s in line[2:].split(" ", 1)]
+                except ValueError:
+                    raise ValueError("Bad line: %r" % line)
             if state == state_QUERY_HEADER:
                 header_tags[key] = value
             elif state == state_ALIGN_HEADER:
@@ -343,7 +357,7 @@ def FastaM10Iterator(handle, alphabet = single_letter_alphabet):
 
 
 if __name__ == "__main__":
-    print "Running a quick self-test"
+    print("Running a quick self-test")
 
     #http://emboss.sourceforge.net/docs/themes/alnformats/align.simple
     simple_example = \
@@ -577,33 +591,31 @@ QDFAFTRKMRREARQVEQSW
 
 Function used was FASTA [version 34.26 January 12, 2007]
 
-"""                 
+"""
 
-
-    from StringIO import StringIO
+    from Bio._py3k import StringIO
 
     alignments = list(FastaM10Iterator(StringIO(simple_example)))
     assert len(alignments) == 4, len(alignments)
     assert len(alignments[0]) == 2
     for a in alignments:
-        print "Alignment %i sequences of length %i" \
-              % (len(a), a.get_alignment_length())
+        print("Alignment %i sequences of length %i" \
+              % (len(a), a.get_alignment_length()))
         for r in a:
-            print "%s %s %i" % (r.seq, r.id, r.annotations["original_length"])
-        #print a.annotations
-    print "Done"
+            print("%s %s %i" % (r.seq, r.id, r.annotations["original_length"]))
+        #print(a.annotations)
+    print("Done")
 
     import os
     path = "../../Tests/Fasta/"
-    files = [f for f in os.listdir(path) if os.path.splitext(f)[-1] == ".m10"]
-    files.sort()
+    files = sorted(f for f in os.listdir(path) if os.path.splitext(f)[-1] == ".m10")
     for filename in files:
         if os.path.splitext(filename)[-1] == ".m10":
-            print
-            print filename
-            print "="*len(filename)
-            for i,a in enumerate(FastaM10Iterator(open(os.path.join(path,filename)))):
-                print "#%i, %s" % (i+1,a)
+            print("")
+            print(filename)
+            print("=" * len(filename))
+            for i, a in enumerate(FastaM10Iterator(open(os.path.join(path, filename)))):
+                print("#%i, %s" % (i+1, a))
                 for r in a:
                     if "-" in r.seq:
                         assert r.seq.alphabet.gap_char == "-"

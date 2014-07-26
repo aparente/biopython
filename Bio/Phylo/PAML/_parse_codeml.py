@@ -17,10 +17,11 @@ except ValueError:
             return float(text)
         except ValueError:
             if text.lower()=="nan":
-                import struct 
+                import struct
                 return struct.unpack('d', struct.pack('Q', 0xfff8000000000000))[0]
             else:
                 raise
+
 
 def parse_basics(lines, results):
     """Parse the basic information that should be present in most codeml output files.
@@ -28,10 +29,16 @@ def parse_basics(lines, results):
     # multi_models is used to designate there being results for more than one
     # model in the file
     multi_models = False
+    multi_genes = False
     version_re = re.compile(".+ \(in paml version (\d+\.\d+[a-z]*).*")
     model_re = re.compile("Model:\s+(.+)")
-    codon_freq_re = re.compile("Codon frequency model:\s+(.+)")
-    siteclass_re = re.compile("Site-class models:\s*(.*)")
+    num_genes_re = re.compile("\(([0-9]+) genes: separate data\)")
+    # In codeml 4.1, the codon substitution model is headed by:
+    # "Codon frequencies:"
+    # In codeml 4.3+ it is headed by:
+    # "Codon frequency model:"
+    codon_freq_re = re.compile("Codon frequenc[a-z\s]{3,7}:\s+(.+)")
+    siteclass_re = re.compile("Site-class models:\s*([^\s]*)")
     for line in lines:
         # Find all floating point numbers in this line
         line_floats_res = line_floats_re.findall(line)
@@ -45,6 +52,14 @@ def parse_basics(lines, results):
         model_res = model_re.match(line)
         if model_res is not None:
             results["model"] = model_res.group(1)
+        # Find out if more than one genes are analyzed
+        num_genes_res = num_genes_re.search(line)
+        if num_genes_res is not None:
+            results["genes"] = []
+            num_genes = int(num_genes_res.group(1))
+            for n in range(num_genes):
+                results["genes"].append({})
+            multi_genes = True
             continue
         # Get the codon substitution model
         codon_freq_res = codon_freq_re.match(line)
@@ -67,40 +82,59 @@ def parse_basics(lines, results):
         # Get the maximum log-likelihood
         if "ln Lmax" in line and len(line_floats) > 0:
             results["lnL max"] = line_floats[0]
-    return (results, multi_models)
- 
-def parse_nssites(lines, results, multi_models):
+    return (results, multi_models, multi_genes)
+
+
+def parse_nssites(lines, results, multi_models, multi_genes):
     """Determine which NSsites models are present and parse them.
     """
 
     ns_sites = {}
     model_re = re.compile("Model (\d+):\s+(.+)")
+    gene_re = re.compile("Gene\s+([0-9]+)\s+.+")
     siteclass_model = results.get("site-class model")
     if not multi_models:
     # If there's only one model in the results, find out
-    # which one it is and then parse it. 
+    # which one it is and then parse it.
         if siteclass_model is None:
             siteclass_model = "one-ratio"
         current_model = {"one-ratio" : 0,
                         "NearlyNeutral" : 1,
                         "PositiveSelection" : 2,
-                        "discrete (4 categories)" : 3,
-                        "beta (4 categories)" : 7,
-                        "beta&w>1 (5 categories)" : 8}[siteclass_model]
-        model_results = {"description" : siteclass_model}
-        model_results = parse_model(lines, model_results)
-        ns_sites[current_model] = model_results
+                        "discrete" : 3,
+                        "beta" : 7,
+                        "beta&w>1" : 8}[siteclass_model]
+        if multi_genes:
+            genes = results["genes"]
+            current_gene = None
+            gene_start = None
+            for line_num, line in enumerate(lines):
+                gene_res = gene_re.match(line)
+                if gene_res:
+                    if current_gene is not None:
+                        parse_model(lines[gene_start:line_num], model_results)
+                        genes[current_gene-1] = model_results
+                    gene_start = line_num
+                    current_gene = int(gene_res.group(1))
+                    model_results = {"description": siteclass_model}
+            if len(genes[current_gene-1]) == 0:
+                model_results = parse_model(lines[gene_start:], model_results)
+                genes[current_gene-1] = model_results
+        else:
+            model_results = {"description" : siteclass_model}
+            model_results = parse_model(lines, model_results)
+            ns_sites[current_model] = model_results
     else:
     # If there are multiple models in the results, scan through
     # the file and send each model's text to be parsed individually.
         current_model = None
         model_start = None
-        for line_num in range(len(lines)):
+        for line_num, line in enumerate(lines):
             # Find model names. If this is found on a line,
             # all of the following lines until the next time this matches
             # contain results for Model X.
             # Example match: "Model 1: NearlyNeutral (2 categories)"
-            model_res = model_re.match(lines[line_num])
+            model_res = model_re.match(line)
             if model_res:
                 if current_model is not None:
                 # We've already been tracking a model, so it's time
@@ -116,8 +150,8 @@ def parse_nssites(lines, results, multi_models):
         # model to parse.
             model_results = parse_model(lines[model_start:], model_results)
             ns_sites[current_model] = model_results
-    # Only add the ns_sites dict to the results if we really have results. 
-    # Model M0 is added by default in some cases, so if it exists, make sure 
+    # Only add the ns_sites dict to the results if we really have results.
+    # Model M0 is added by default in some cases, so if it exists, make sure
     # it's not empty
     if len(ns_sites) == 1:
         m0 = ns_sites.get(0)
@@ -126,6 +160,7 @@ def parse_nssites(lines, results, multi_models):
     elif len(ns_sites) > 1:
         results["NSsites"] = ns_sites
     return results
+
 
 def parse_model(lines, results):
     """Parse an individual NSsites model's results.
@@ -138,7 +173,7 @@ def parse_model(lines, results):
     num_params = None
     tree_re = re.compile("\(\(+")
     branch_re = re.compile("\s+(\d+\.\.\d+)[\s+\d+\.\d+]+")
-    model_params_re = re.compile("([a-z]\d?)=\s+(\d+\.\d+)")
+    model_params_re = re.compile("(?<!\S)([a-z]\d?)\s*=\s+(\d+\.\d+)")
     for line in lines:
         # Find all floating point numbers in this line
         line_floats_res = line_floats_re.findall(line)
@@ -152,7 +187,7 @@ def parse_model(lines, results):
         # "lnL(ntime: 19  np: 22):  -2021.348300      +0.000000"
         if "lnL(ntime:" in line and len(line_floats) > 0:
             results["lnL"] = line_floats[0]
-            np_res = re.match("lnL\(ntime:\s+\d+\s+np:\s+(\d+)\)",line)
+            np_res = re.match("lnL\(ntime:\s+\d+\s+np:\s+(\d+)\)", line)
             if np_res is not None:
                 num_params = int(np_res.group(1))
         # Get parameter list. This can be useful for specifying starting
@@ -168,7 +203,7 @@ def parse_model(lines, results):
         # the parameter format.
         # Example match:
         # "SEs for parameters:
-        # -1.00000 -1.00000 -1.00000 801727.63247 730462.67590 -1.00000 
+        # -1.00000 -1.00000 -1.00000 801727.63247 730462.67590 -1.00000
         elif "SEs for parameters:" in line:
             SEs_flag = True
         elif SEs_flag and len(line_floats) == num_params:
@@ -181,7 +216,7 @@ def parse_model(lines, results):
         # Find the estimated trees only taking the tree if it has
         # lengths or rate estimates on the branches
         elif tree_re.match(line) is not None:
-            if ":" in line:
+            if ":" in line or "#" in line:
                 if dS_tree_flag:
                     results["dS tree"] = line.strip()
                     dS_tree_flag = False
@@ -189,11 +224,7 @@ def parse_model(lines, results):
                     results["dN tree"] = line.strip()
                     dN_tree_flag = False
                 elif w_tree_flag:
-                    line_edit = line.replace(" '#", ": ")
-                    line_edit = line_edit.replace("'", "")
-                    line_edit = line_edit.replace(" ,", ",")
-                    line_edit = line_edit.replace(" )", ")")
-                    results["omega tree"] = line_edit.strip()
+                    results["omega tree"] = line.strip()
                     w_tree_flag = False
                 else:
                     results["tree"] = line.strip()
@@ -248,7 +279,7 @@ def parse_model(lines, results):
             site_classes = parameters.get("site classes")
             site_classes = parse_siteclass_omegas(line, site_classes)
             parameters["site classes"] = site_classes
-        # Find the omega values corresponding to a branch type from  
+        # Find the omega values corresponding to a branch type from
         # the clade model C for each site class
         # Example match:
         # "branch type 0:    0.31022   1.00000   0.00000"
@@ -257,7 +288,7 @@ def parse_model(lines, results):
             if branch_type:
                 site_classes = parameters.get("site classes")
                 branch_type_no = int(branch_type.group(1))
-                site_classes = parse_clademodelc(branch_type_no, line_floats, 
+                site_classes = parse_clademodelc(branch_type_no, line_floats,
                         site_classes)
                 parameters["site classes"] = site_classes
         # Find the omega values of the foreground branch for each site
@@ -306,10 +337,11 @@ def parse_model(lines, results):
             float_model_params = []
             for param in model_params:
                 float_model_params.append((param[0], _nan_float(param[1])))
-            parameters = dict(parameters.items() + float_model_params)
+            parameters.update(dict(float_model_params))
     if len(parameters) > 0:
         results["parameters"] = parameters
     return results
+
 
 def parse_siteclass_proportions(line_floats):
     """For models which have multiple site classes, find the proportion of the alignment assigned to each class.
@@ -319,6 +351,7 @@ def parse_siteclass_proportions(line_floats):
         for n in range(len(line_floats)):
             site_classes[n] = {"proportion" : line_floats[n]}
     return site_classes
+
 
 def parse_siteclass_omegas(line, site_classes):
     """For models which have multiple site classes, find the omega estimated for each class.
@@ -335,6 +368,7 @@ def parse_siteclass_omegas(line, site_classes):
         site_classes[n]["omega"] = line_floats[n]
     return site_classes
 
+
 def parse_clademodelc(branch_type_no, line_floats, site_classes):
     """Parse results specific to the clade model C.
     """
@@ -345,6 +379,7 @@ def parse_clademodelc(branch_type_no, line_floats, site_classes):
             site_classes[n]["branch types"] = {}
         site_classes[n]["branch types"][branch_type_no] = line_floats[n]
     return site_classes
+
 
 def parse_branch_site_a(foreground, line_floats, site_classes):
     """Parse results specific to the branch site A model.
@@ -361,6 +396,7 @@ def parse_branch_site_a(foreground, line_floats, site_classes):
             site_classes[n]["branch types"]["background"] =\
                     line_floats[n]
     return site_classes
+
 
 def parse_pairwise(lines, results):
     """Parse results from pairwise comparisons.
@@ -401,6 +437,7 @@ def parse_pairwise(lines, results):
         results["pairwise"] = pairwise
     return results
 
+
 def parse_distances(lines, results):
     """Parse amino acid sequence distance results.
     """
@@ -423,7 +460,7 @@ def parse_distances(lines, results):
             raw_aa_distances_flag = False
         # Parse AA distances (raw or ML), in a lower diagonal matrix
         matrix_row_res = matrix_row_re.match(line)
-        if matrix_row_res and (raw_aa_distances_flag or \
+        if matrix_row_res and (raw_aa_distances_flag or
                 ml_aa_distances_flag):
             seq_name = matrix_row_res.group(1).strip()
             if seq_name not in sequences:

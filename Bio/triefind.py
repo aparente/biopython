@@ -1,3 +1,8 @@
+# This code is part of the Biopython distribution and governed by its
+# license.  Please see the LICENSE file that should have been included
+# as part of this package.
+#
+
 """
 Given a trie, find all occurrences of a word in the trie in a string.
 
@@ -14,6 +19,7 @@ find_words    Find keys in a trie matching whole words in a string.
 import string
 import re
 
+
 def match(string, trie):
     """match(string, trie) -> longest key or None
 
@@ -26,9 +32,10 @@ def match(string, trie):
         substr = string[:i+1]
         if not trie.has_prefix(substr):
             break
-        if trie.has_key(substr):
+        if substr in trie:
             longest = substr
     return longest
+
 
 def match_all(string, trie):
     """match_all(string, trie) -> list of keys
@@ -42,9 +49,10 @@ def match_all(string, trie):
         substr = string[:i+1]
         if not trie.has_prefix(substr):
             break
-        if trie.has_key(substr):
+        if substr in trie:
             matches.append(substr)
     return matches
+
 
 def find(string, trie):
     """find(string, trie) -> list of tuples (key, start, end)
@@ -64,6 +72,7 @@ def find(string, trie):
 
 DEFAULT_BOUNDARY_CHARS = string.punctuation + string.whitespace
 
+
 def find_words(string, trie):
     """find_words(string, trie) -> list of tuples (key, start, end)
 
@@ -72,7 +81,7 @@ def find_words(string, trie):
 
     """
     _boundary_re = re.compile(r"[%s]+" % re.escape(DEFAULT_BOUNDARY_CHARS))
-        
+
     results = []
     start = 0     # index of word boundary
     while start < len(string):

@@ -7,16 +7,32 @@
 
 This API follows the same semantics as Biopython's `SeqIO` and `AlignIO`.
 """
+
+from __future__ import print_function
+
 __docformat__ = "restructuredtext en"
 
-from Bio.Phylo import BaseTree, NewickIO, NexusIO, PhyloXMLIO
-
+from Bio import File
+from Bio.Phylo import (
+                       BaseTree, 
+                       NewickIO, 
+                       NexusIO, 
+                       PhyloXMLIO,
+                       NeXMLIO,
+                       )
 
 supported_formats = {
         'newick':   NewickIO,
         'nexus':    NexusIO,
         'phyloxml': PhyloXMLIO,
+        'nexml':    NeXMLIO,
         }
+
+try: 
+    from Bio.Phylo import CDAOIO
+    supported_formats['cdao'] = CDAOIO
+except:
+    pass
 
 
 def parse(file, format, **kwargs):
@@ -30,19 +46,12 @@ def parse(file, format, **kwargs):
 
     >>> trees = parse('../../Tests/PhyloXML/apaf.xml', 'phyloxml')
     >>> for tree in trees:
-    ...     print tree.rooted
+    ...     print(tree.rooted)
     True
     """
-    do_close = False
-    if isinstance(file, basestring):
-        file = open(file, 'r')
-        do_close = True
-    try:
-        for tree in getattr(supported_formats[format], 'parse')(file, **kwargs):
+    with File.as_handle(file, 'r') as fp:
+        for tree in getattr(supported_formats[format], 'parse')(fp, **kwargs):
             yield tree
-    finally:
-        if do_close:
-            file.close()
 
 
 def read(file, format, **kwargs):
@@ -53,11 +62,11 @@ def read(file, format, **kwargs):
     """
     try:
         tree_gen = parse(file, format, **kwargs)
-        tree = tree_gen.next()
+        tree = next(tree_gen)
     except StopIteration:
         raise ValueError("There are no trees in this file.")
     try:
-        tree_gen.next()
+        next(tree_gen)
     except StopIteration:
         return tree
     else:
@@ -67,22 +76,16 @@ def read(file, format, **kwargs):
 
 def write(trees, file, format, **kwargs):
     """Write a sequence of trees to file in the given format."""
-    if isinstance(trees, BaseTree.Tree):
+    if isinstance(trees, BaseTree.Tree) or isinstance(trees, BaseTree.Clade):
         # Passed a single tree instead of an iterable -- that's OK
         trees = [trees]
-    do_close = False
-    if isinstance(file, basestring):
-        file = open(file, 'w+')
-        do_close = True
-    try:
-        n = getattr(supported_formats[format], 'write')(trees, file, **kwargs)
-    finally:
-        if do_close:
-            file.close()
+    with File.as_handle(file, 'w+') as fp:
+        n = getattr(supported_formats[format], 'write')(trees, fp, **kwargs)
     return n
 
 
-def convert(in_file, in_format, out_file, out_format, **kwargs):
+def convert(in_file, in_format, out_file, out_format, parse_args={}, **kwargs):
     """Convert between two tree file formats."""
-    trees = parse(in_file, in_format)
+    trees = parse(in_file, in_format, **parse_args)
     return write(trees, out_file, out_format, **kwargs)
+

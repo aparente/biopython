@@ -1,3 +1,8 @@
+# This code is part of the Biopython distribution and governed by its
+# license.  Please see the LICENSE file that should have been included
+# as part of this package.
+#
+
 """Generic functionality useful for all gene representations.
 
 This module contains classes which can be used for all the different
@@ -12,13 +17,14 @@ import random
 from Bio.Alphabet import _verify_alphabet
 from Bio.Seq import Seq, MutableSeq
 
+
 class PatternIO(object):
     """Allow reading and writing of patterns to files.
 
     This just defines a simple persistance class for patterns, making
     it easy to write them to a file and read 'em back.
     """
-    def __init__(self, alphabet = None):
+    def __init__(self, alphabet=None):
         """Intialize the reader and writer class.
 
         Arguments:
@@ -42,15 +48,14 @@ class PatternIO(object):
         """
         for pattern in pattern_list:
             # deal with signatures, concatentate them with the separator
-            if (type(pattern) == type([]) or 
-                type(pattern) == type(tuple([]))):
+            if isinstance(pattern, list) or isinstance(pattern, tuple):
                 string_pattern = self.separator.join(pattern)
             # deal with the normal cases
             else:
                 string_pattern = pattern
-                
+
             output_handle.write("%s\n" % string_pattern)
-            
+
     def write_seq(self, seq_pattern_list, output_handle):
         """Convenience function to write Seq objects to a file.
 
@@ -63,9 +68,9 @@ class PatternIO(object):
         for seq_pattern in seq_pattern_list:
             if isinstance(seq_pattern, MutableSeq):
                 seq = seq_pattern.toseq()
-                all_patterns.append(seq.tostring())
+                all_patterns.append(str(seq))
             elif isinstance(seq_pattern, Seq):
-                all_patterns.append(seq_pattern.tostring())
+                all_patterns.append(str(seq_pattern))
             else:
                 raise ValueError("Unexpected pattern type %r" % seq_pattern)
 
@@ -75,8 +80,8 @@ class PatternIO(object):
         """Read patterns from the specified handle.
         """
         all_patterns = []
-        
-        while 1:
+
+        while True:
             cur_line = input_handle.readline()
 
             if not(cur_line):
@@ -84,17 +89,17 @@ class PatternIO(object):
 
             cur_pattern = cur_line.rstrip()
             # split up signatures
-            if cur_pattern.find(self.separator) >= 0:
+            if self.separator in cur_pattern:
                 cur_pattern = tuple(cur_pattern.split(self.separator))
 
             if self._alphabet is not None:
                 # make single patterns (not signatures) into lists, so we
                 # can check signatures and single patterns the same
-                if type(cur_pattern) != type(tuple([])):
+                if not isinstance(cur_pattern, tuple):
                     test_pattern = [cur_pattern]
                 else:
                     test_pattern = cur_pattern
-                for pattern_item in test_pattern: 
+                for pattern_item in test_pattern:
                     pattern_seq = Seq(pattern_item, self._alphabet)
                     if not(_verify_alphabet(pattern_seq)):
                         raise ValueError("Pattern %s not matching alphabet %s"
@@ -103,6 +108,7 @@ class PatternIO(object):
             all_patterns.append(cur_pattern)
 
         return all_patterns
+
 
 class PatternRepository(object):
     """This holds a list of specific patterns found in sequences.
@@ -119,7 +125,7 @@ class PatternRepository(object):
         o pattern_info - A representation of all of the patterns found in
         a *Finder search. This should be a dictionary, where the keys
         are patterns, and the values are the number of times a pattern is
-        found. 
+        found.
 
         The patterns are represented interally as a list of two
         tuples, where the first element is the number of times a pattern
@@ -143,7 +149,7 @@ class PatternRepository(object):
         patterns = []
         for pattern_info in self._pattern_list:
             patterns.append(pattern_info[1])
-            
+
         return patterns
 
     def get_random(self, num_patterns):
@@ -177,7 +183,7 @@ class PatternRepository(object):
         num_to_return = int(len(all_patterns) * percent)
 
         return all_patterns[:num_to_return]
-        
+
     def get_top(self, num_patterns):
         """Return the specified number of most frequently occurring patterns
 
@@ -190,7 +196,7 @@ class PatternRepository(object):
             all_patterns.append(pattern_info[1])
 
         return all_patterns
-    
+
     def get_differing(self, top_num, bottom_num):
         """Retrieve patterns that are at the extreme ranges.
 
@@ -217,7 +223,7 @@ class PatternRepository(object):
 
         return all_patterns
 
-    def remove_polyA(self, at_percentage = .9):
+    def remove_polyA(self, at_percentage=.9):
         """Remove patterns which are likely due to polyA tails from the lists.
 
         This is just a helper function to remove pattenrs which are likely
@@ -227,7 +233,7 @@ class PatternRepository(object):
 
         XXX Could we write a more general function, based on info content
         or something like that?
-        
+
         Arguments:
 
         o at_percentage - The percentage of A and T residues in a pattern

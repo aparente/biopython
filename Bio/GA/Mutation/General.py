@@ -1,3 +1,8 @@
+# This code is part of the Biopython distribution and governed by its
+# license.  Please see the LICENSE file that should have been included
+# as part of this package.
+#
+
 """General functionality for mutations.
 """
 # standard library
@@ -6,11 +11,12 @@ import random
 # local stuff
 from Bio.GA.Organism import Organism
 
+
 class SafeFitnessMutation(object):
     """Perform mutations, but do not allow decreases in organism fitness.
 
     This doesn't actually do any mutation work, but just checks that
-    newly create organisms do not have lower fitnesses. 
+    newly create organisms do not have lower fitnesses.
     """
     def __init__(self, actual_mutation, accept_less = 0.0):
         """Initialize to do safe mutations

@@ -25,7 +25,7 @@ End;
 """
 
 # 'index' starts from 1; 'tree' is the Newick tree string
-TREE_TEMPLATE = "Tree tree%(index)d=[&U]%(tree)s;"
+TREE_TEMPLATE = "Tree tree%(index)d=[&U]%(tree)s"
 
 
 def parse(handle):
@@ -37,6 +37,7 @@ def parse(handle):
     eventually change Nexus to use the new NewickIO parser directly.)
     """
     nex = Nexus.Nexus(handle)
+
     # NB: Once Nexus.Trees is modified to use Tree.Newick objects, do this:
     # return iter(nex.trees)
     # Until then, convert the Nexus.Trees.Tree object hierarchy:
@@ -54,6 +55,7 @@ def parse(handle):
         yield Newick.Tree(root=newroot, rooted=nxtree.rooted, name=nxtree.name,
                           weight=nxtree.weight)
 
+
 def write(obj, handle, **kwargs):
     """Write a new Nexus file containing the given trees.
 
@@ -66,7 +68,7 @@ def write(obj, handle, **kwargs):
                    for idx, nwk in enumerate(
                         writer.to_strings(plain=False, plain_newick=True,
                                           **kwargs))]
-    tax_labels = map(str, chain(*(t.get_terminals() for t in trees)))
+    tax_labels = [str(x) for x in chain(*(t.get_terminals() for t in trees))]
     text = NEX_TEMPLATE % {
             'count':    len(tax_labels),
             'labels':   ' '.join(tax_labels),

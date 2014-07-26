@@ -1,3 +1,8 @@
+# This code is part of the Biopython distribution and governed by its
+# license.  Please see the LICENSE file that should have been included
+# as part of this package.
+#
+
 """Represent information for graphical display.
 
 Classes in this module are designed to hold information in a way that
@@ -20,6 +25,7 @@ RAINBOW_COLORS = {(1, 1)  : colors.violet,
                   (5, 5)  : colors.yellow,
                   (6, 6)  : colors.orange,
                   (7, 20) : colors.red}
+
 
 class ChromosomeCounts(object):
     """Represent a chromosome with count information.
@@ -53,7 +59,7 @@ class ChromosomeCounts(object):
             self._count_info[name] = 0
             self._label_info[name] = None
             self._scale_info[name] = 1
-        
+
         self._color_scheme = color_scheme
 
     def add_count(self, segment_name, count = 1):
@@ -155,7 +161,7 @@ class ChromosomeCounts(object):
             if self._count_info[seg_name] > 0:
                 color = self._color_from_count(self._count_info[seg_name])
                 cur_segment.fill_color = color
-            
+
             if self._label_info[seg_name] is not None:
                 cur_segment.label = self._label_info[seg_name]
 
@@ -179,6 +185,3 @@ class ChromosomeCounts(object):
         # if we got here we didn't find a color for the count
         raise ValueError("Count value %s was not found in the color scheme."
                          % count)
-        
-        
-        

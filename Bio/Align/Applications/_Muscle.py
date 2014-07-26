@@ -5,9 +5,12 @@
 """Command line wrapper for the multiple alignment program MUSCLE.
 """
 
-__docformat__ = "epytext en" #Don't just use plain text in epydoc API pages!
+from __future__ import print_function
+
+__docformat__ = "epytext en"  # Don't just use plain text in epydoc API pages!
 
 from Bio.Application import _Option, _Switch, AbstractCommandline
+
 
 class MuscleCommandline(AbstractCommandline):
     r"""Command line wrapper for the multiple alignment program MUSCLE.
@@ -21,8 +24,8 @@ class MuscleCommandline(AbstractCommandline):
     >>> in_file = r"C:\My Documents\unaligned.fasta"
     >>> out_file = r"C:\My Documents\aligned.fasta"
     >>> muscle_cline = MuscleCommandline(muscle_exe, input=in_file, out=out_file)
-    >>> print muscle_cline
-    C:\Program Files\Aligments\muscle3.8.31_i86win32.exe -in "C:\My Documents\unaligned.fasta" -out "C:\My Documents\aligned.fasta"
+    >>> print(muscle_cline)
+    "C:\Program Files\Aligments\muscle3.8.31_i86win32.exe" -in "C:\My Documents\unaligned.fasta" -out "C:\My Documents\aligned.fasta"
 
     You would typically run the command line with muscle_cline() or via
     the Python subprocess module, as described in the Biopython tutorial.
@@ -226,7 +229,7 @@ class MuscleCommandline(AbstractCommandline):
                     "Objective score used by tree dependent refinement",
                     checker_function=lambda x: x in OBJECTIVE_SCORES,
                     equate=False),
-            #root1           pseudo               psuedo             Method used to root
+            #root1           pseudo               pseudo             Method used to root
             _Option(["-root1", "root1"],
                     "Method used to root tree in iteration 1",
                     checker_function=lambda x: x in TREE_ROOT_METHODS,
@@ -353,10 +356,10 @@ class MuscleCommandline(AbstractCommandline):
                     "Write PHYLIP interleaved output to specified filename",
                     filename=True,
                     equate=False),
-            _Option(["-physout", "physout"],"Write PHYLIP sequential format to specified filename",
+            _Option(["-physout", "physout"], "Write PHYLIP sequential format to specified filename",
                     filename=True,
                     equate=False),
-            _Option(["-htmlout", "htmlout"],"Write HTML output to specified filename",
+            _Option(["-htmlout", "htmlout"], "Write HTML output to specified filename",
                     filename=True,
                     equate=False),
             _Option(["-clwout", "clwout"],
@@ -463,12 +466,13 @@ class MuscleCommandline(AbstractCommandline):
            ]
         AbstractCommandline.__init__(self, cmd, **kwargs)
 
+
 def _test():
     """Run the module's doctests (PRIVATE)."""
-    print "Runing MUSCLE doctests..."
+    print("Running MUSCLE doctests...")
     import doctest
     doctest.testmod()
-    print "Done"
+    print("Done")
 
 if __name__ == "__main__":
     _test()

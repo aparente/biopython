@@ -8,7 +8,7 @@
 See Also
 --------
 Official specification:
-   http://phyloxml.org/ 
+   http://phyloxml.org/
 Journal article:
     Han and Zmasek (2009), doi:10.1186/1471-2105-10-356
 """
@@ -16,6 +16,8 @@ __docformat__ = "restructuredtext en"
 
 import re
 import warnings
+
+from Bio._py3k import basestring
 
 from Bio import Alphabet
 from Bio.Align import MultipleSeqAlignment
@@ -52,15 +54,21 @@ class Phyloxml(PhyloElement):
     elements from other namespaces.
 
     :Parameters:
-        attributes
+        attributes : dict
             (XML namespace definitions)
-        phylogenies
-            list of phylogenetic trees
-        other
-            list of arbitrary non-phyloXML elements, if any
+        phylogenies : list
+            The phylogenetic trees
+        other : list
+            Arbitrary non-phyloXML elements, if any
     """
     def __init__(self, attributes, phylogenies=None, other=None):
-        self.attributes = attributes
+        self.attributes = {
+                "xmlns:xsi": "http://www.w3.org/2001/XMLSchema-instance", # standard
+                "xmlns": "http://www.phyloxml.org",
+                "xsi:schemaLocation": "http://www.phyloxml.org http://www.phyloxml.org/1.10/phyloxml.xsd",
+                }
+        if attributes:
+            self.attributes.update(attributes)
         self.phylogenies = phylogenies or []
         self.other = other or []
 
@@ -105,14 +113,14 @@ class Other(PhyloElement):
             attributes on the XML node
         value : string
             text contained directly within this XML node
-        children : list 
+        children : list
             child nodes, if any (also `Other` instances)
     """
     def __init__(self, tag, namespace=None, attributes=None, value=None,
             children=None):
         self.tag = tag
         self.namespace = namespace
-        self.attributes = attributes
+        self.attributes = attributes or {}
         self.value = value
         self.children = children or []
 
@@ -145,7 +153,7 @@ class Phylogeny(PhyloElement, BaseTree.Tree):
             Confidence objects for this tree
         clade_relations : list
             CladeRelation objects
-        sequence_relations : list 
+        sequence_relations : list
             SequenceRelation objects
         properties : list
             Property objects
@@ -217,7 +225,7 @@ class Phylogeny(PhyloElement, BaseTree.Tree):
             return False
         seqs = self._filter_search(is_aligned_seq, 'preorder', True)
         try:
-            first_seq = seqs.next()
+            first_seq = next(seqs)
         except StopIteration:
             # No aligned sequences were found --> empty MSA
             return MultipleSeqAlignment([])
@@ -463,7 +471,7 @@ class Annotation(PhyloElement):
     """
     re_ref = re.compile(r'[a-zA-Z0-9_]+:[a-zA-Z0-9_\.\-\s]+')
 
-    def __init__(self, 
+    def __init__(self,
             # Attributes
             ref=None, source=None, evidence=None, type=None,
             # Child nodes
@@ -483,7 +491,7 @@ class Annotation(PhyloElement):
 
 class BinaryCharacters(PhyloElement):
     """The names and/or counts of binary characters present, gained, and lost
-    at the root of a clade. 
+    at the root of a clade.
     """
     def __init__(self,
             # Attributes
@@ -500,7 +508,6 @@ class BinaryCharacters(PhyloElement):
         self.lost=lost or []
         self.present=present or []
         self.absent=absent or []
-
 
 
 class CladeRelation(PhyloElement):
@@ -540,11 +547,131 @@ class Confidence(PhyloElement):
         self.value = value
         self.type = type
 
+    # Comparison operators
+
+    def __hash__(self):
+        """Return the hash value of the object.
+
+        Hash values are integers. They are used to quickly compare dictionary
+        keys during a dictionary lookup. Numeric values that compare equal have
+        the same hash value (even if they are of different types, as is the
+        case for 1 and 1.0).
+        """
+        return id(self)
+
+    def __eq__(self, other):
+        if isinstance(other, Confidence):
+            return self.value == other.value
+        return self.value == other
+
+    def __ne__(self, other):
+        if isinstance(other, Confidence):
+            return self.value != other.value
+        return self.value != other
+
+    # Ordering -- see functools.total_ordering in Py2.7
+
+    def __lt__(self, other):
+        if isinstance(other, Confidence):
+            return self.value < other.value
+        return self.value < other
+
+    def __le__(self, other):
+        return self < other or self == other
+
+    def __gt__(self, other):
+        return not (self <= other)
+
+    def __ge__(self, other):
+        return not (self.value < other)
+
+    # Arithmetic operators, including reverse
+
+    def __add__(self, other):
+        return self.value + other
+
+    def __radd__(self, other):
+        return other + self.value
+
+    def __sub__(self, other):
+        return self.value - other
+
+    def __rsub__(self, other):
+        return other - self.value
+
+    def __mul__(self, other):
+        return self.value * other
+
+    def __rmul__(self, other):
+        return other * self.value
+
+    def __div__(self, other):
+        return self.value.__div__(other)
+
+    def __rdiv__(self, other):
+        return other.__div__(self.value)
+
+    def __truediv__(self, other):
+        """Rational-style division in Py3.0+.
+
+        Also active in Py2.5+ with __future__.division import.
+        """
+        return self.value / other
+
+    def __rtruediv__(self, other):
+        return other / self.value
+
+    def __floordiv__(self, other):
+        """C-style and old-style division in Py3.0+.
+
+        Also active in Py2.5+ with __future__.division import.
+        """
+        return self.value.__floordiv__(other)
+
+    def __rfloordiv__(self, other):
+        return other.__floordiv__(self.value)
+
+    def __mod__(self, other):
+        return self.value % other
+
+    def __rmod__(self, other):
+        return other % self.value
+
+    def __divmod__(self, other):
+        return divmod(self.value, other)
+
+    def __rdivmod__(self, other):
+        return divmod(other, self.value)
+
+    def __pow__(self, other, modulo=None):
+        if modulo is not None:
+            return pow(self.value, other, modulo)
+        return pow(self.value, other)
+
+    def __rpow__(self, other):
+        return pow(other, self.value)
+
+    # Unary arithmetic operations: -, +, abs()
+
+    def __neg__(self):
+        return -self.value
+
+    def __pos__(self):
+        return self.value
+
+    def __abs__(self):
+        return abs(self.value)
+
+    # Explicit coercion to numeric types: int, long, float
+
     def __float__(self):
         return float(self.value)
 
     def __int__(self):
         return int(self.value)
+
+    def __long__(self):
+        return long(self.value)
 
 
 class Date(PhyloElement):
@@ -566,7 +693,7 @@ class Date(PhyloElement):
         maximum : float
             upper bound on the date value
     """
-    def __init__(self, value=None, unit=None, desc=None, 
+    def __init__(self, value=None, unit=None, desc=None,
             minimum=None, maximum=None):
         self.value = value
         self.unit = unit
@@ -636,15 +763,16 @@ class Events(PhyloElement):
         self.confidence = confidence
 
     def items(self):
-        return [(k, v) for k, v in self.__dict__.iteritems() if v is not None]
+        return [(k, v) for k, v in self.__dict__.items() if v is not None]
 
     def keys(self):
-        return [k for k, v in self.__dict__.iteritems() if v is not None]
+        return [k for k, v in self.__dict__.items() if v is not None]
 
     def values(self):
-        return [v for v in self.__dict__.itervalues() if v is not None]
+        return [v for v in self.__dict__.values() if v is not None]
 
     def __len__(self):
+        #TODO - Better way to do this?
         return len(self.values())
 
     def __getitem__(self, key):
@@ -888,7 +1016,7 @@ class Sequence(PhyloElement):
                  'protein': Alphabet.generic_protein}
     re_symbol = re.compile(r'\S{1,10}')
 
-    def __init__(self, 
+    def __init__(self,
             # Attributes
             type=None, id_ref=None, id_source=None,
             # Child nodes
@@ -915,7 +1043,7 @@ class Sequence(PhyloElement):
     @classmethod
     def from_seqrecord(cls, record, is_aligned=None):
         """Create a new PhyloXML Sequence from a SeqRecord object."""
-        if is_aligned == None:
+        if is_aligned is None:
             is_aligned = isinstance(record.seq.alphabet, Alphabet.Gapped)
         params = {
                 'accession': Accession(record.id, ''),
@@ -964,7 +1092,7 @@ class Sequence(PhyloElement):
 
     def to_seqrecord(self):
         """Create a SeqRecord object from this Sequence instance.
-        
+
         The seqrecord.annotations dictionary is packed like so::
 
             { # Sequence attributes with no SeqRecord equivalent:
@@ -993,7 +1121,7 @@ class Sequence(PhyloElement):
         """
         def clean_dict(dct):
             """Remove None-valued items from a dictionary."""
-            return dict((key, val) for key, val in dct.iteritems()
+            return dict((key, val) for key, val in dct.items()
                         if val is not None)
 
         seqrec = SeqRecord(Seq(self.mol_seq.value, self.get_alphabet()),
@@ -1048,7 +1176,7 @@ class SequenceRelation(PhyloElement):
     """Express a typed relationship between two sequences.
 
     For example, this could be used to describe an orthology (in which case
-    attribute 'type' is 'orthology'). 
+    attribute 'type' is 'orthology').
 
     :Parameters:
         id_ref_0 : Id
@@ -1116,7 +1244,7 @@ class Taxonomy(PhyloElement):
         'subspecies', 'variety', 'subvariety', 'form', 'subform', 'cultivar',
         'unknown', 'other'))
 
-    def __init__(self, 
+    def __init__(self,
             # Attributes
             id_source=None,
             # Child nodes

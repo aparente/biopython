@@ -7,16 +7,18 @@
 # some of the models in the Wise2 package by Ewan Birney available from:
 # ftp://ftp.ebi.ac.uk/pub/software/unix/wise2/
 # http://www.ebi.ac.uk/Wise2/
-# 
+#
 # Bio.Wise.psw is for protein Smith-Waterman alignments
 # Bio.Wise.dnal is for Smith-Waterman DNA alignments
 
-__version__ = "$Revision: 1.12 $"
+from __future__ import print_function
 
-import commands
-import itertools
-import os
 import re
+
+#Importing with leading underscore as not intended to be exposed
+from Bio._py3k import getoutput as _getoutput
+from Bio._py3k import zip
+from Bio._py3k import map
 
 from Bio import Wise
 
@@ -26,6 +28,7 @@ _SCORE_GAP_START = -5
 _SCORE_GAP_EXTENSION = -1
 
 _CMDLINE_DNAL = ["dnal", "-alb", "-nopretty"]
+
 
 def _build_dnal_cmdline(match, mismatch, gap, extension):
     res = _CMDLINE_DNAL[:]
@@ -37,14 +40,19 @@ def _build_dnal_cmdline(match, mismatch, gap, extension):
     return res
 
 _CMDLINE_FGREP_COUNT = "fgrep -c '%s' %s"
+
+
 def _fgrep_count(pattern, file):
-    return int(commands.getoutput(_CMDLINE_FGREP_COUNT % (pattern, file)))
+    return int(_getoutput(_CMDLINE_FGREP_COUNT % (pattern, file)))
 
 _re_alb_line2coords = re.compile(r"^\[([^:]+):[^\[]+\[([^:]+):")
+
+
 def _alb_line2coords(line):
     return tuple([int(coord)+1 # one-based -> zero-based
                   for coord
                   in _re_alb_line2coords.match(line).groups()])
+
 
 def _get_coords(filename):
     alb = file(filename)
@@ -61,12 +69,9 @@ def _get_coords(filename):
 
     if end_line is None: # sequence is too short
         return [(0, 0), (0, 0)]
-        
-    return zip(*map(_alb_line2coords, [start_line, end_line])) # returns [(start0, end0), (start1, end1)]
 
-def _any(seq, pred=bool):
-    "Returns True if pred(x) is True at least one element in the iterable"
-    return True in itertools.imap(pred, seq)
+    return list(zip(*map(_alb_line2coords, [start_line, end_line]))) # returns [(start0, end0), (start1, end1)]
+
 
 class Statistics(object):
     """
@@ -81,16 +86,16 @@ class Statistics(object):
             self.extensions = 0
         else:
             self.extensions = _fgrep_count('"INSERT" %s' % extension, filename)
-            
+
         self.score = (match*self.matches +
                       mismatch*self.mismatches +
                       gap*self.gaps +
                       extension*self.extensions)
 
-        if _any([self.matches, self.mismatches, self.gaps, self.extensions]):
+        if self.matches or self.mismatches or self.gaps or self.extensions:
             self.coords = _get_coords(filename)
         else:
-            self.coords = [(0, 0), (0,0)]
+            self.coords = [(0, 0), (0, 0)]
 
     def identity_fraction(self):
         return self.matches/(self.matches+self.mismatches)
@@ -98,7 +103,10 @@ class Statistics(object):
     header = "identity_fraction\tmatches\tmismatches\tgaps\textensions"
 
     def __str__(self):
-        return "\t".join([str(x) for x in (self.identity_fraction(), self.matches, self.mismatches, self.gaps, self.extensions)])
+        return "\t".join(str(x) for x in (self.identity_fraction(),
+                                          self.matches, self.mismatches,
+                                          self.gaps, self.extensions))
+
 
 def align(pair, match=_SCORE_MATCH, mismatch=_SCORE_MISMATCH, gap=_SCORE_GAP_START, extension=_SCORE_GAP_EXTENSION, **keywds):
     cmdline = _build_dnal_cmdline(match, mismatch, gap, extension)
@@ -112,17 +120,19 @@ def align(pair, match=_SCORE_MATCH, mismatch=_SCORE_MISMATCH, gap=_SCORE_GAP_STA
         except KeyError:
             raise
 
+
 def main():
     import sys
     stats = align(sys.argv[1:3])
-    print "\n".join(["%s: %s" % (attr, getattr(stats, attr))
-                     for attr in
-                     ("matches", "mismatches", "gaps", "extensions")])
-    print "identity_fraction: %s" % stats.identity_fraction()
-    print "coords: %s" % stats.coords
+    print("\n".join("%s: %s" % (attr, getattr(stats, attr))
+                    for attr in ("matches", "mismatches", "gaps", "extensions")))
+    print("identity_fraction: %s" % stats.identity_fraction())
+    print("coords: %s" % stats.coords)
+
 
 def _test(*args, **keywds):
-    import doctest, sys
+    import doctest
+    import sys
     doctest.testmod(sys.modules[__name__], *args, **keywds)
 
 if __name__ == "__main__":

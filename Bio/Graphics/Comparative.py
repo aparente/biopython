@@ -1,3 +1,8 @@
+# This code is part of the Biopython distribution and governed by its
+# license.  Please see the LICENSE file that should have been included
+# as part of this package.
+#
+
 """Plots to compare information between different sources.
 
 This file contains high level plots which are designed to be used to
@@ -16,6 +21,7 @@ from reportlab.graphics import renderPDF, renderPS
 from reportlab.graphics.charts.markers import *
 
 from Bio.Graphics import _write
+
 
 class ComparativeScatterPlot(object):
     """Display a scatter-type plot comparing two different kinds of info.
@@ -45,7 +51,7 @@ class ComparativeScatterPlot(object):
         # the information we'll be writing
         self.display_info = []
 
-        # inital colors and shapes used for drawing points
+        # initial colors and shapes used for drawing points
         self.color_choices = [colors.red, colors.green, colors.blue,
                               colors.yellow, colors.orange, colors.black]
         self.shape_choices = [makeFilledCircle, makeEmptySquare,
@@ -112,7 +118,7 @@ class ComparativeScatterPlot(object):
         scatter_plot.yValueAxis.valueStep = (y_max - y_min) / 10.0
 
         self._set_colors_and_shapes(scatter_plot, self.display_info)
-        
+
         cur_drawing.add(scatter_plot)
 
     def _set_colors_and_shapes(self, scatter_plot, display_info):

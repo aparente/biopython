@@ -5,6 +5,8 @@
 
 """Vector class, including rotation-related functions."""
 
+from __future__ import print_function
+
 import numpy
 
 
@@ -20,33 +22,33 @@ def m2rotaxis(m):
     angle=numpy.arccos(t)
     if angle<1e-15:
         # Angle is 0
-        return 0.0, Vector(1,0,0)
+        return 0.0, Vector(1, 0, 0)
     elif angle<numpy.pi:
         # Angle is smaller than pi
-        x=m[2,1]-m[1,2]
-        y=m[0,2]-m[2,0]
-        z=m[1,0]-m[0,1]
-        axis=Vector(x,y,z)
+        x=m[2, 1]-m[1, 2]
+        y=m[0, 2]-m[2, 0]
+        z=m[1, 0]-m[0, 1]
+        axis=Vector(x, y, z)
         axis.normalize()
         return angle, axis
     else:
         # Angle is pi - special case!
-        m00=m[0,0]
-        m11=m[1,1]
-        m22=m[2,2]
+        m00=m[0, 0]
+        m11=m[1, 1]
+        m22=m[2, 2]
         if m00>m11 and m00>m22:
             x=numpy.sqrt(m00-m11-m22+0.5)
-            y=m[0,1]/(2*x)
-            z=m[0,2]/(2*x)
+            y=m[0, 1]/(2*x)
+            z=m[0, 2]/(2*x)
         elif m11>m00 and m11>m22:
             y=numpy.sqrt(m11-m00-m22+0.5)
-            x=m[0,1]/(2*y)
-            z=m[1,2]/(2*y)
+            x=m[0, 1]/(2*y)
+            z=m[1, 2]/(2*y)
         else:
             z=numpy.sqrt(m22-m00-m11+0.5)
-            x=m[0,2]/(2*z)
-            y=m[1,2]/(2*z)
-        axis=Vector(x,y,z)
+            x=m[0, 2]/(2*z)
+            y=m[1, 2]/(2*z)
+        axis=Vector(x, y, z)
         axis.normalize()
         return numpy.pi, axis
 
@@ -74,9 +76,9 @@ def rotaxis2m(theta, vector):
     Calculate a left multiplying rotation matrix that rotates
     theta rad around vector.
 
-    Example: 
-    
-        >>> m=rotaxis(pi, Vector(1,0,0))
+    Example:
+
+        >>> m=rotaxis(pi, Vector(1, 0, 0))
         >>> rotated_vector=any_vector.left_multiply(m)
 
     @type theta: float
@@ -93,35 +95,37 @@ def rotaxis2m(theta, vector):
     c=numpy.cos(theta)
     s=numpy.sin(theta)
     t=1-c
-    x,y,z=vector.get_array()
-    rot=numpy.zeros((3,3))
+    x, y, z=vector.get_array()
+    rot=numpy.zeros((3, 3))
     # 1st row
-    rot[0,0]=t*x*x+c
-    rot[0,1]=t*x*y-s*z
-    rot[0,2]=t*x*z+s*y
+    rot[0, 0]=t*x*x+c
+    rot[0, 1]=t*x*y-s*z
+    rot[0, 2]=t*x*z+s*y
     # 2nd row
-    rot[1,0]=t*x*y+s*z
-    rot[1,1]=t*y*y+c
-    rot[1,2]=t*y*z-s*x
+    rot[1, 0]=t*x*y+s*z
+    rot[1, 1]=t*y*y+c
+    rot[1, 2]=t*y*z-s*x
     # 3rd row
-    rot[2,0]=t*x*z-s*y
-    rot[2,1]=t*y*z+s*x
-    rot[2,2]=t*z*z+c
+    rot[2, 0]=t*x*z-s*y
+    rot[2, 1]=t*y*z+s*x
+    rot[2, 2]=t*z*z+c
     return rot
 
 rotaxis=rotaxis2m
 
-def refmat(p,q):
+
+def refmat(p, q):
     """
     Return a (left multiplying) matrix that mirrors p onto q.
 
     Example:
-        >>> mirror=refmat(p,q)
+        >>> mirror=refmat(p, q)
         >>> qq=p.left_multiply(mirror)
-        >>> print q, qq # q and qq should be the same
+        >>> print(q)
+        >>> print(qq) # q and qq should be the same
 
     @type p,q: L{Vector}
-    @return: The mirror operation, a 3x3 Numeric array. 
+    @return: The mirror operation, a 3x3 Numeric array.
     """
     p.normalize()
     q.normalize()
@@ -135,13 +139,15 @@ def refmat(p,q):
     ref=i-2*numpy.dot(b, numpy.transpose(b))
     return ref
 
-def rotmat(p,q):
+
+def rotmat(p, q):
     """
     Return a (left multiplying) matrix that rotates p onto q.
 
     Example:
-        >>> r=rotmat(p,q)
-        >>> print q, p.left_multiply(r)
+        >>> r=rotmat(p, q)
+        >>> print(q)
+        >>> print(p.left_multiply(r))
 
     @param p: moving vector
     @type p: L{Vector}
@@ -155,6 +161,7 @@ def rotmat(p,q):
     rot=numpy.dot(refmat(q, -p), refmat(p, -p))
     return rot
 
+
 def calc_angle(v1, v2, v3):
     """
     Calculate the angle between 3 vectors
@@ -162,13 +169,14 @@ def calc_angle(v1, v2, v3):
 
     @param v1, v2, v3: the tree points that define the angle
     @type v1, v2, v3: L{Vector}
-    
+
     @return: angle
     @rtype: float
     """
     v1=v1-v2
     v3=v3-v2
     return v1.angle(v3)
+
 
 def calc_dihedral(v1, v2, v3, v4):
     """
@@ -195,6 +203,7 @@ def calc_dihedral(v1, v2, v3, v4):
         pass
     return angle
 
+
 class Vector(object):
     "3D vector"
 
@@ -210,8 +219,8 @@ class Vector(object):
             self._ar=numpy.array((x, y, z), 'd')
 
     def __repr__(self):
-        x,y,z=self._ar
-        return "<Vector %.2f, %.2f, %.2f>" % (x,y,z)
+        x, y, z=self._ar
+        return "<Vector %.2f, %.2f, %.2f>" % (x, y, z)
 
     def __neg__(self):
         "Return Vector(-x, -y, -z)"
@@ -246,12 +255,12 @@ class Vector(object):
     def __pow__(self, other):
         "Return VectorxVector (cross product) or Vectorxscalar"
         if isinstance(other, Vector):
-            a,b,c=self._ar
-            d,e,f=other._ar
-            c1=numpy.linalg.det(numpy.array(((b,c), (e,f))))
-            c2=-numpy.linalg.det(numpy.array(((a,c), (d,f))))
-            c3=numpy.linalg.det(numpy.array(((a,b), (d,e))))
-            return Vector(c1,c2,c3)
+            a, b, c=self._ar
+            d, e, f=other._ar
+            c1=numpy.linalg.det(numpy.array(((b, c), (e, f))))
+            c2=-numpy.linalg.det(numpy.array(((a, c), (d, f))))
+            c3=numpy.linalg.det(numpy.array(((a, b), (d, e))))
+            return Vector(c1, c2, c3)
         else:
             a=self._ar*numpy.array(other)
             return Vector(a)
@@ -261,6 +270,9 @@ class Vector(object):
 
     def __setitem__(self, i, value):
         self._ar[i]=value
+
+    def __contains__(self, i):
+        return (i in self._ar)
 
     def norm(self):
         "Return vector norm"
@@ -286,8 +298,8 @@ class Vector(object):
         n2=other.norm()
         c=(self*other)/(n1*n2)
         # Take care of roundoff errors
-        c=min(c,1)
-        c=max(-1,c)
+        c=min(c, 1)
+        c=max(-1, c)
         return numpy.arccos(c)
 
     def get_array(self):
@@ -310,70 +322,71 @@ class Vector(object):
 
 if __name__=="__main__":
 
-        from numpy.random import random
+    from numpy.random import random
 
-        v1=Vector(0,0,1)
-        v2=Vector(0,0,0)
-        v3=Vector(0,1,0)
-        v4=Vector(1,1,0)
+    v1=Vector(0, 0, 1)
+    v2=Vector(0, 0, 0)
+    v3=Vector(0, 1, 0)
+    v4=Vector(1, 1, 0)
 
-        v4.normalize()
+    v4.normalize()
 
-        print v4
+    print(v4)
 
-        print calc_angle(v1, v2, v3)
-        dih=calc_dihedral(v1, v2, v3, v4)
-        # Test dihedral sign
-        assert(dih>0)
-        print "DIHEDRAL ", dih
+    print(calc_angle(v1, v2, v3))
+    dih=calc_dihedral(v1, v2, v3, v4)
+    # Test dihedral sign
+    assert(dih>0)
+    print("DIHEDRAL %f" % dih)
 
-        ref=refmat(v1, v3)
-        rot=rotmat(v1, v3)
+    ref=refmat(v1, v3)
+    rot=rotmat(v1, v3)
 
-        print v3
-        print v1.left_multiply(ref)
-        print v1.left_multiply(rot)
-        print v1.right_multiply(numpy.transpose(rot))
+    print(v3)
+    print(v1.left_multiply(ref))
+    print(v1.left_multiply(rot))
+    print(v1.right_multiply(numpy.transpose(rot)))
 
-        # -
-        print v1-v2
-        print v1-1
-        print v1+(1,2,3)
-        # +
-        print v1+v2
-        print v1+3
-        print v1-(1,2,3)
-        # *
-        print v1*v2
-        # /
-        print v1/2
-        print v1/(1,2,3)
-        # **
-        print v1**v2
-        print v1**2
-        print v1**(1,2,3)
-        # norm
-        print v1.norm()
-        # norm squared
-        print v1.normsq()
-        # setitem
-        v1[2]=10
-        print v1
-        # getitem
-        print v1[2]
+    # -
+    print(v1-v2)
+    print(v1-1)
+    print(v1+(1, 2, 3))
+    # +
+    print(v1+v2)
+    print(v1+3)
+    print(v1-(1, 2, 3))
+    # *
+    print(v1*v2)
+    # /
+    print(v1/2)
+    print(v1/(1, 2, 3))
+    # **
+    print(v1**v2)
+    print(v1**2)
+    print(v1**(1, 2, 3))
+    # norm
+    print(v1.norm())
+    # norm squared
+    print(v1.normsq())
+    # setitem
+    v1[2]=10
+    print(v1)
+    # getitem
+    print(v1[2])
 
-        print numpy.array(v1)
+    print(numpy.array(v1))
 
-        print "ROT"
+    print("ROT")
 
-        angle=random()*numpy.pi
-        axis=Vector(random(3)-random(3))
-        axis.normalize()
+    angle=random()*numpy.pi
+    axis=Vector(random(3)-random(3))
+    axis.normalize()
 
-        m=rotaxis(angle, axis)
+    m=rotaxis(angle, axis)
 
-        cangle, caxis=m2rotaxis(m)
+    cangle, caxis=m2rotaxis(m)
 
-        print angle-cangle
-        print axis-caxis
-        print
+    print(angle-cangle)
+    print(axis-caxis)
+    print("")
+
